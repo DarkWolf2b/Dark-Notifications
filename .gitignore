@@ -1,0 +1,45 @@
+# gradle
+.gradle/
+build/
+out/
+classes/
+
+# eclipse
+*.launch
+
+# idea (often contains absolute Windows paths)
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# vscode
+.settings/
+.vscode/
+bin/
+.classpath
+.project
+
+# macos
+*.DS_Store
+
+# fabric / local run (logs can include machine paths)
+run/
+
+# java
+hs_err_*.log
+replay_*.log
+*.hprof
+*.jfr
+
+# local secrets / env
+.env
+*.local
+
+# editor / agent scratch
+*.bak
+*~
+
+# OS / sync junk
+Thumbs.db
+desktop.ini

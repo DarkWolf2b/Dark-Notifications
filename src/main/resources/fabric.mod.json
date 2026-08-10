@@ -1,0 +1,30 @@
+{
+	"schemaVersion": 1,
+	"id": "dark-notifications",
+	"version": "${version}",
+	"name": "Dark Notifications",
+	"description": "Dark Notifications client for Fabric.",
+	"license": "CC0-1.0",
+	"environment": "*",
+	"entrypoints": {
+		"main": [
+			"dark.noti.Noti"
+		],
+		"client": [
+			"dark.noti.client.NotiClient"
+		]
+	},
+	"mixins": [
+		"noti.mixins.json",
+		{
+			"config": "noti.client.mixins.json",
+			"environment": "client"
+		}
+	],
+	"depends": {
+		"fabricloader": ">=0.19.3",
+		"minecraft": "~1.21.11",
+		"java": ">=21",
+		"fabric-api": "*"
+	}
+}

@@ -1,0 +1,17 @@
+{
+	"required": true,
+	"package": "dark.noti.client.mixin",
+	"compatibilityLevel": "JAVA_21",
+	"client": [
+		"ChatMixin",
+		"ChatComponentAccessor",
+		"ChatScreenMixin",
+		"ClientPacketListenerMixin"
+	],
+	"injectors": {
+		"defaultRequire": 1
+	},
+	"overwrites": {
+		"requireAnnotations": true
+	}
+}
