@@ -52,11 +52,7 @@ public class ConfigScreen extends Screen {
 		int closeY = top + (HEADER - closeSize) / 2;
 		g.fill(closeX, closeY, closeX + closeSize, closeY + closeSize,
 			hit(mouseX, mouseY, closeX, closeY, closeSize, closeSize) ? 0xFF555555 : 0xFF333333);
-		String xLabel = "x";
-		g.drawString(font, xLabel,
-			closeX + (closeSize - font.width(xLabel)) / 2,
-			closeY + (closeSize - font.lineHeight) / 2,
-			0xFFFFFFFF, false);
+		drawCloseX(g, closeX, closeY, closeSize, 0xFFFFFFFF);
 
 		int inputY = top + HEADER + 10;
 		g.fill(left + 8, inputY, left + WIDTH - 8, inputY + ROW, 0xFF1A1A1A);
@@ -239,6 +235,20 @@ public class ConfigScreen extends Screen {
 		outline(g, x, y, w, h, Theme.accent());
 		Font font = Minecraft.getInstance().font;
 		g.drawString(font, text, x + (w - font.width(text)) / 2, y + 5, 0xFFFFFFFF, false);
+	}
+
+	/** Pixel X centered in the close button (font glyphs sit high in the cell). */
+	private static void drawCloseX(GuiGraphics g, int bx, int by, int size, int color) {
+		int pad = 3;
+		int x0 = bx + pad;
+		int y0 = by + pad;
+		int x1 = bx + size - pad - 1;
+		int y1 = by + size - pad - 1;
+		int steps = Math.min(x1 - x0, y1 - y0);
+		for (int i = 0; i <= steps; i++) {
+			g.fill(x0 + i, y0 + i, x0 + i + 1, y0 + i + 1, color);
+			g.fill(x1 - i, y0 + i, x1 - i + 1, y0 + i + 1, color);
+		}
 	}
 
 	private static void outline(GuiGraphics g, int x, int y, int w, int h, int color) {

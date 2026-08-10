@@ -24,8 +24,8 @@ public final class VisualRangeModule extends Module {
 	private static final int DEFAULT_PREFIX = 0xFFB57BEA;
 
 	private final SectionSetting generalSection = add(new SectionSetting("General", false));
-	private final BoolSetting join = add(new BoolSetting("Join", true));
-	private final BoolSetting leave = add(new BoolSetting("Leave", true));
+	private final BoolSetting enter = add(new BoolSetting("Enter", true));
+	private final BoolSetting left = add(new BoolSetting("Left", true));
 	private final BoolSetting friends = add(new BoolSetting("Friends", true));
 
 	private final SectionSetting stackSection = add(new SectionSetting("Stacking", false));
@@ -60,8 +60,8 @@ public final class VisualRangeModule extends Module {
 	public VisualRangeModule() {
 		super("VisualRange", Category.NOTIFICATIONS);
 
-		generalSection.addSetting(join);
-		generalSection.addSetting(leave);
+		generalSection.addSetting(enter);
+		generalSection.addSetting(left);
 		generalSection.addSetting(friends);
 
 		stackSection.addSetting(stack);
@@ -132,7 +132,7 @@ public final class VisualRangeModule extends Module {
 			currentPlayers.add(name);
 		}
 
-		if (join.getValue()) {
+		if (enter.getValue()) {
 			for (String name : currentPlayers) {
 				if (!previousPlayers.contains(name)) {
 					sendMessage(name, true);
@@ -140,7 +140,7 @@ public final class VisualRangeModule extends Module {
 			}
 		}
 
-		if (leave.getValue()) {
+		if (left.getValue()) {
 			for (String name : previousPlayers) {
 				if (!currentPlayers.contains(name)) {
 					sendMessage(name, false);

@@ -69,11 +69,17 @@ publishing {
 	}
 }
 
-// PowerShell-friendly alias — Gradle task names are case-sensitive
+// PowerShell-friendly aliases — Gradle task names are case-sensitive
 afterEvaluate {
+	def runClientTask = tasks.named("runClient")
 	tasks.register("runclient") {
 		group = "fabric"
 		description = "Alias for runClient"
-		dependsOn tasks.named("runClient")
+		dependsOn runClientTask
+	}
+	tasks.register("runclients") {
+		group = "fabric"
+		description = "Alias for runClient"
+		dependsOn runClientTask
 	}
 }

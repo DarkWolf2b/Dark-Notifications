@@ -1,10 +1,12 @@
 package dark.noti.client.mixin;
 
+import dark.noti.client.features.modules.notifications.ChestSwapModule;
 import dark.noti.client.features.modules.notifications.DeathNotifierModule;
 import dark.noti.client.features.modules.notifications.TotemPopNotifierModule;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.network.protocol.game.ClientboundEntityEventPacket;
+import net.minecraft.network.protocol.game.ClientboundSetEquipmentPacket;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityEvent;
 import net.minecraft.world.entity.player.Player;
@@ -29,5 +31,10 @@ public class ClientPacketListenerMixin {
 			TotemPopNotifierModule.onPlayerTotemPop(player);
 			DeathNotifierModule.onPlayerTotemPop(player);
 		}
+	}
+
+	@Inject(method = "handleSetEquipment", at = @At("TAIL"))
+	private void darkNoti$chestSwap(ClientboundSetEquipmentPacket packet, CallbackInfo ci) {
+		ChestSwapModule.onEquipmentPacket(packet);
 	}
 }
