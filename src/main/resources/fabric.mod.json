@@ -4,7 +4,7 @@
 	"version": "${version}",
 	"name": "Dark Notifications",
 	"description": "Dark Notifications client for Fabric.",
-	"license": "CC0-1.0",
+	"license": "MIT",
 	"environment": "*",
 	"entrypoints": {
 		"main": [
