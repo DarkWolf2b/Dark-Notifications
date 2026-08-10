@@ -187,20 +187,50 @@ public class Panel {
 
 	public static void collapseAllColorPickers() {
 		for (Module module : ModuleManager.get().all()) {
-			collapseColorPickers(module);
+			collapseColorPickersOnly(module);
+		}
+	}
+
+	/** Collapse color pickers and nested sections (Targets, Colors, etc.). */
+	public static void collapseAllNestedSettings() {
+		for (Module module : ModuleManager.get().all()) {
+			collapseNestedSettings(module);
 		}
 	}
 
 	public static void collapseColorPickers(Module module) {
+		collapseNestedSettings(module);
+	}
+
+	private static void collapseColorPickersOnly(Module module) {
 		for (Setting<?> s : module.getSettings()) {
-			if (s instanceof ColorSetting c) {
-				c.setExpanded(false);
-			} else if (s instanceof SectionSetting section) {
-				for (Setting<?> nested : section.getSettings()) {
-					if (nested instanceof ColorSetting c) {
-						c.setExpanded(false);
-					}
-				}
+			collapseColorPickersOnlyTree(s);
+		}
+	}
+
+	private static void collapseColorPickersOnlyTree(Setting<?> s) {
+		if (s instanceof ColorSetting c) {
+			c.setExpanded(false);
+		} else if (s instanceof SectionSetting section) {
+			for (Setting<?> nested : section.getSettings()) {
+				collapseColorPickersOnlyTree(nested);
+			}
+		}
+	}
+
+	public static void collapseNestedSettings(Module module) {
+		for (Setting<?> s : module.getSettings()) {
+			collapseSettingTree(s);
+		}
+	}
+
+	private static void collapseSettingTree(Setting<?> s) {
+		if (s instanceof ColorSetting c) {
+			c.setExpanded(false);
+		} else if (s instanceof SectionSetting section) {
+			section.setExpanded(false);
+			for (Setting<?> nested : section.getSettings()) {
+				collapseSettingTree(nested);
 			}
 		}
 	}
@@ -229,28 +259,39 @@ public class Panel {
 
 	private static void collectOpenColorPickers(Module module, List<String> out) {
 		for (Setting<?> s : module.getSettings()) {
-			if (s instanceof ColorSetting c && c.isExpanded()) {
-				out.add(module.getName() + '\0' + c.getName());
-			} else if (s instanceof SectionSetting section) {
-				for (Setting<?> nested : section.getSettings()) {
-					if (nested instanceof ColorSetting c && c.isExpanded()) {
-						out.add(module.getName() + '\0' + c.getName());
-					}
-				}
+			collectOpenColorPickersTree(module.getName(), s, out);
+		}
+	}
+
+	private static void collectOpenColorPickersTree(String moduleName, Setting<?> s, List<String> out) {
+		if (s instanceof ColorSetting c && c.isExpanded()) {
+			out.add(moduleName + '\0' + c.getName());
+		} else if (s instanceof SectionSetting section) {
+			for (Setting<?> nested : section.getSettings()) {
+				collectOpenColorPickersTree(moduleName, nested, out);
 			}
 		}
 	}
 
 	private static ColorSetting findColorSetting(Module module, String name) {
 		for (Setting<?> s : module.getSettings()) {
-			if (s instanceof ColorSetting c && c.getName().equals(name)) {
-				return c;
+			ColorSetting found = findColorSettingTree(s, name);
+			if (found != null) {
+				return found;
 			}
-			if (s instanceof SectionSetting section) {
-				for (Setting<?> nested : section.getSettings()) {
-					if (nested instanceof ColorSetting c && c.getName().equals(name)) {
-						return c;
-					}
+		}
+		return null;
+	}
+
+	private static ColorSetting findColorSettingTree(Setting<?> s, String name) {
+		if (s instanceof ColorSetting c && c.getName().equals(name)) {
+			return c;
+		}
+		if (s instanceof SectionSetting section) {
+			for (Setting<?> nested : section.getSettings()) {
+				ColorSetting found = findColorSettingTree(nested, name);
+				if (found != null) {
+					return found;
 				}
 			}
 		}
@@ -439,6 +480,10 @@ public class Panel {
 	}
 	
 	private int drawNestedSetting(GuiGraphics g, Setting<?> s, int cy, int mx, int my) {
+		if (s instanceof SectionSetting section) {
+			return drawSection(g, section, cy, mx, my);
+		}
+
 		boolean hover = hit(mx, my, x, cy, WIDTH, ROW);
 		boolean on = s instanceof BoolSetting b && b.getValue();
 		boolean isExpandable = s instanceof ColorSetting c && c.isExpanded();
@@ -657,6 +702,15 @@ public class Panel {
 		if (s.isHidden()) {
 			return 0;
 		}
+		if (s instanceof SectionSetting section) {
+			int height = ROW;
+			if (section.isExpanded()) {
+				for (Setting<?> nested : section.getSettings()) {
+					height += nestedSettingHeight(nested);
+				}
+			}
+			return height;
+		}
 		if (s instanceof ColorSetting c && c.isExpanded()) {
 			return ROW + pickerHeight(c);
 		}
@@ -854,6 +908,35 @@ public class Panel {
 	}
 	
 	private boolean handleNestedSettingClick(Setting<?> s, double mx, double my, int cy, int button) {
+		if (s instanceof SectionSetting section) {
+			if (my >= cy && my <= cy + ROW) {
+				if (button == 0 && section.isToggleable()) {
+					section.toggleEnabled();
+					return true;
+				}
+				if (button == 1) {
+					section.toggle();
+					return true;
+				}
+				return false;
+			}
+			if (!section.isExpanded()) {
+				return false;
+			}
+			int nestedCy = cy + ROW;
+			for (Setting<?> nested : section.getSettings()) {
+				if (nested.isHidden()) {
+					continue;
+				}
+				int nestedH = nestedSettingHeight(nested);
+				if (nestedH > 0 && hit(mx, my, x, nestedCy, WIDTH, nestedH)
+					&& handleNestedSettingClick(nested, mx, my, nestedCy, button)) {
+					return true;
+				}
+				nestedCy += nestedH;
+			}
+			return false;
+		}
 		if (my >= cy && my <= cy + ROW) {
 			if (s instanceof ColorSetting c) {
 				if (button == 0 && isDeletableSavedColor(c) && hitDeleteX(mx, my, cy, c)) {
@@ -1324,13 +1407,23 @@ public class Panel {
 			return false;
 		}
 		for (Setting<?> s : module.getSettings()) {
-			if (s instanceof SectionSetting section) {
-				if (section.getSettings().contains(setting)) {
-					return true;
-				}
-				if (section.getEnableSetting() == setting) {
-					return true;
-				}
+			if (s instanceof SectionSetting section && sectionContains(section, setting)) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	private static boolean sectionContains(SectionSetting section, Setting<?> setting) {
+		if (section.getEnableSetting() == setting) {
+			return true;
+		}
+		for (Setting<?> nested : section.getSettings()) {
+			if (nested == setting) {
+				return true;
+			}
+			if (nested instanceof SectionSetting inner && sectionContains(inner, setting)) {
+				return true;
 			}
 		}
 		return false;

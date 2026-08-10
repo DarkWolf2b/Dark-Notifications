@@ -91,11 +91,11 @@ public class ClickGuiScreen extends Screen {
 			} else {
 				setOpenSettings(new ArrayList<>());
 				setOpenColorPickers(new ArrayList<>());
-				Panel.collapseAllColorPickers();
+				Panel.collapseAllNestedSettings();
 			}
 		} else {
 			setOpenColorPickers(new ArrayList<>());
-			Panel.collapseAllColorPickers();
+			Panel.collapseAllNestedSettings();
 		}
 	}
 
@@ -231,7 +231,7 @@ public class ClickGuiScreen extends Screen {
 		} else {
 			setOpenSettings(new ArrayList<>());
 			setOpenColorPickers(new ArrayList<>());
-			Panel.collapseAllColorPickers();
+			Panel.collapseAllNestedSettings();
 		}
 
 		super.onClose();

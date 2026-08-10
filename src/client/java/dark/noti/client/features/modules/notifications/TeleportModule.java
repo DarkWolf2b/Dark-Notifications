@@ -94,18 +94,27 @@ public final class TeleportModule extends Module {
 		iconSection.addSetting(iconColor);
 		iconSection.addSetting(bracketsColor);
 
-		textSection.addSetting(nameColor);
-		textSection.addSetting(friendColor);
-		textSection.addSetting(selfColor);
-		textSection.addSetting(possessiveColor);
-		textSection.addSetting(friendPossessiveColor);
-		textSection.addSetting(selfPossessiveColor);
-		textSection.addSetting(actionColor);
-		textSection.addSetting(friendActionColor);
-		textSection.addSetting(selfActionColor);
-		textSection.addSetting(coordColor);
-		textSection.addSetting(showPeriod);
-		textSection.addSetting(periodColor);
+		SectionSetting namesGroup = new SectionSetting("Names", false);
+		namesGroup.addSetting(nameColor);
+		namesGroup.addSetting(friendColor);
+		namesGroup.addSetting(selfColor);
+		SectionSetting possessivesGroup = new SectionSetting("Possessives", false);
+		possessivesGroup.addSetting(possessiveColor);
+		possessivesGroup.addSetting(friendPossessiveColor);
+		possessivesGroup.addSetting(selfPossessiveColor);
+		SectionSetting actionsGroup = new SectionSetting("Actions", false);
+		actionsGroup.addSetting(actionColor);
+		actionsGroup.addSetting(friendActionColor);
+		actionsGroup.addSetting(selfActionColor);
+		SectionSetting extrasGroup = new SectionSetting("Extras", false);
+		extrasGroup.addSetting(coordColor);
+		extrasGroup.addSetting(showPeriod);
+		extrasGroup.addSetting(periodColor);
+
+		textSection.addSetting(namesGroup);
+		textSection.addSetting(possessivesGroup);
+		textSection.addSetting(actionsGroup);
+		textSection.addSetting(extrasGroup);
 	}
 
 	@Override

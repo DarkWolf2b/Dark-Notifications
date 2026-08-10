@@ -86,16 +86,25 @@ public final class TotemPopNotifierModule extends Module {
 		iconSection.addSetting(friendBracketsColor);
 		iconSection.addSetting(selfBracketsColor);
 
-		textSection.addSetting(nameColor);
-		textSection.addSetting(friendColor);
-		textSection.addSetting(selfColor);
-		textSection.addSetting(actionColor);
-		textSection.addSetting(friendActionColor);
-		textSection.addSetting(selfActionColor);
-		textSection.addSetting(countColor);
-		textSection.addSetting(friendCountColor);
-		textSection.addSetting(selfCountColor);
-		textSection.addSetting(showDot);
+		SectionSetting namesGroup = new SectionSetting("Names", false);
+		namesGroup.addSetting(nameColor);
+		namesGroup.addSetting(friendColor);
+		namesGroup.addSetting(selfColor);
+		SectionSetting actionsGroup = new SectionSetting("Actions", false);
+		actionsGroup.addSetting(actionColor);
+		actionsGroup.addSetting(friendActionColor);
+		actionsGroup.addSetting(selfActionColor);
+		SectionSetting countsGroup = new SectionSetting("Counts", false);
+		countsGroup.addSetting(countColor);
+		countsGroup.addSetting(friendCountColor);
+		countsGroup.addSetting(selfCountColor);
+		SectionSetting extrasGroup = new SectionSetting("Extras", false);
+		extrasGroup.addSetting(showDot);
+
+		textSection.addSetting(namesGroup);
+		textSection.addSetting(actionsGroup);
+		textSection.addSetting(countsGroup);
+		textSection.addSetting(extrasGroup);
 
 		stackSection.addSetting(stack);
 		stackSection.addSetting(stackDelay);

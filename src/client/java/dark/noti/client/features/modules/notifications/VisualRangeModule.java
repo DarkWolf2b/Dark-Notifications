@@ -76,12 +76,19 @@ public final class VisualRangeModule extends Module {
 		iconSection.addSetting(iconColor);
 		iconSection.addSetting(bracketsColor);
 
-		textSection.addSetting(nameColor);
-		textSection.addSetting(friendColor);
-		textSection.addSetting(actionColor);
-		textSection.addSetting(friendActionColor);
-		textSection.addSetting(showPeriod);
-		textSection.addSetting(periodColor);
+		SectionSetting namesGroup = new SectionSetting("Names", false);
+		namesGroup.addSetting(nameColor);
+		namesGroup.addSetting(friendColor);
+		SectionSetting actionsGroup = new SectionSetting("Actions", false);
+		actionsGroup.addSetting(actionColor);
+		actionsGroup.addSetting(friendActionColor);
+		SectionSetting extrasGroup = new SectionSetting("Extras", false);
+		extrasGroup.addSetting(showPeriod);
+		extrasGroup.addSetting(periodColor);
+
+		textSection.addSetting(namesGroup);
+		textSection.addSetting(actionsGroup);
+		textSection.addSetting(extrasGroup);
 	}
 
 	public void setIgnoreFakePlayer(boolean value) {

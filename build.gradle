@@ -3,6 +3,10 @@ plugins {
 	id 'maven-publish'
 }
 
+base {
+	archivesName = 'Dark Notifications'
+}
+
 version = project.mod_version
 group = project.maven_group
 

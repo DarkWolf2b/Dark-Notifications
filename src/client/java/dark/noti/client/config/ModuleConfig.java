@@ -290,7 +290,9 @@ public final class ModuleConfig {
 			case ModeSetting m -> out.addProperty(setting.getName(), m.get());
 			case StringSetting s -> out.addProperty(setting.getName(), s.get());
 			case BindSetting b -> out.addProperty(setting.getName(), b.getKey());
-			case SectionSetting s -> out.addProperty(setting.getName(), s.isExpanded());
+			case SectionSetting ignored -> {
+				// Expanded is GUI-only (keep-open timer / in-memory); do not persist.
+			}
 			case ColorSetting c -> {
 				JsonObject color = new JsonObject();
 				color.addProperty("argb", c.customArgb());
@@ -337,10 +339,8 @@ public final class ModuleConfig {
 					b.set(el.getAsInt());
 				}
 			}
-			case SectionSetting s -> {
-				if (el.isJsonPrimitive()) {
-					s.setExpanded(el.getAsBoolean());
-				}
+			case SectionSetting ignored -> {
+				// Ignore legacy expanded flags from older configs.
 			}
 			case ColorSetting c -> {
 				if (el.isJsonObject()) {

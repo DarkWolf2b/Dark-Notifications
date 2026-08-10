@@ -11,6 +11,10 @@ import org.spongepowered.asm.mixin.injection.ModifyVariable;
 
 @Mixin(ChatComponent.class)
 public class ChatMixin {
+	/**
+	 * Only capture the modified argument — including other method params breaks
+	 * ModifyVariable under intermediary (production) mappings.
+	 */
 	@ModifyVariable(
 		method = "addMessage(Lnet/minecraft/network/chat/Component;Lnet/minecraft/network/chat/MessageSignature;Lnet/minecraft/client/GuiMessageTag;)V",
 		at = @At("HEAD"),

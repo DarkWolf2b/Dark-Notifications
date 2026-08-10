@@ -82,10 +82,17 @@ public final class CCMNotifierModule extends Module {
 		iconSection.addSetting(enableColor);
 		iconSection.addSetting(disableColor);
 
-		textSection.addSetting(nameColor);
-		textSection.addSetting(actionColor);
-		textSection.addSetting(onColor);
-		textSection.addSetting(offColor);
+		SectionSetting namesGroup = new SectionSetting("Names", false);
+		namesGroup.addSetting(nameColor);
+		SectionSetting actionsGroup = new SectionSetting("Actions", false);
+		actionsGroup.addSetting(actionColor);
+		SectionSetting statesGroup = new SectionSetting("States", false);
+		statesGroup.addSetting(onColor);
+		statesGroup.addSetting(offColor);
+
+		textSection.addSetting(namesGroup);
+		textSection.addSetting(actionsGroup);
+		textSection.addSetting(statesGroup);
 
 		syncModeSections();
 	}

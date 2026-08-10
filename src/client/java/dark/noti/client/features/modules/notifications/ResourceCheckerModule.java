@@ -72,10 +72,19 @@ public final class ResourceCheckerModule extends Module {
 		iconSection.addSetting(iconColor);
 		iconSection.addSetting(bracketsColor);
 
-		textSection.addSetting(nameColor);
-		textSection.addSetting(actionColor);
-		textSection.addSetting(valueColor);
-		textSection.addSetting(showDot);
+		SectionSetting namesGroup = new SectionSetting("Names", false);
+		namesGroup.addSetting(nameColor);
+		SectionSetting actionsGroup = new SectionSetting("Actions", false);
+		actionsGroup.addSetting(actionColor);
+		SectionSetting valuesGroup = new SectionSetting("Values", false);
+		valuesGroup.addSetting(valueColor);
+		SectionSetting extrasGroup = new SectionSetting("Extras", false);
+		extrasGroup.addSetting(showDot);
+
+		textSection.addSetting(namesGroup);
+		textSection.addSetting(actionsGroup);
+		textSection.addSetting(valuesGroup);
+		textSection.addSetting(extrasGroup);
 	}
 
 	@Override

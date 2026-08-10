@@ -74,12 +74,19 @@ public final class LogoutNotifierModule extends Module {
 		iconSection.addSetting(iconColor);
 		iconSection.addSetting(bracketsColor);
 
-		textSection.addSetting(nameColor);
-		textSection.addSetting(friendColor);
-		textSection.addSetting(actionColor);
-		textSection.addSetting(friendActionColor);
-		textSection.addSetting(coordColor);
-		textSection.addSetting(showDot);
+		SectionSetting namesGroup = new SectionSetting("Names", false);
+		namesGroup.addSetting(nameColor);
+		namesGroup.addSetting(friendColor);
+		SectionSetting actionsGroup = new SectionSetting("Actions", false);
+		actionsGroup.addSetting(actionColor);
+		actionsGroup.addSetting(friendActionColor);
+		SectionSetting extrasGroup = new SectionSetting("Extras", false);
+		extrasGroup.addSetting(coordColor);
+		extrasGroup.addSetting(showDot);
+
+		textSection.addSetting(namesGroup);
+		textSection.addSetting(actionsGroup);
+		textSection.addSetting(extrasGroup);
 	}
 
 	@Override
