@@ -1149,6 +1149,10 @@ public class Panel {
 		if (s instanceof dark.noti.client.features.settings.StringSetting st && button == 0) {
 			clearStringListening();
 			st.setListening(true);
+			// Single-char fields (e.g. CMDPrefix): clear so the next key replaces.
+			if (st.maxLength() == 1) {
+				st.set("");
+			}
 			return true;
 		}
 		if (s instanceof ActionSetting a) {
@@ -1202,6 +1206,9 @@ public class Panel {
 						String current = st.get();
 						if (current.length() < st.maxLength()) {
 							st.set(current + c);
+						} else if (st.maxLength() == 1) {
+							// Replace instead of silently ignoring (CMDPrefix, etc.).
+							st.set(String.valueOf(c));
 						}
 					}
 					return true;

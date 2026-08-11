@@ -66,7 +66,11 @@ public class ClickGuiModule extends Module {
 
 	public String getCmdPrefix() {
 		String prefix = cmdPrefix.get();
-		return prefix == null || prefix.isEmpty() ? "." : prefix;
+		if (prefix == null || prefix.isEmpty()) {
+			return ".";
+		}
+		// Always one character for chat commands.
+		return prefix.substring(0, 1);
 	}
 
 	public void syncEnabled(boolean enabled) {
