@@ -140,11 +140,9 @@ public abstract class ChatScreenMixin extends Screen {
 
 		int key = event.key();
 		if (key == GLFW.GLFW_KEY_TAB) {
-			// Like vanilla: Tab accepts the selected suggestion (also when there's only one).
-			String completed = ClientCommandSuggestions.complete(value);
-			this.input.setValue(completed);
-			this.input.setCursorPosition(completed.length());
-			ClientCommandSuggestions.onInputChanged(completed);
+			// Cycle the suggestion list (Shift+Tab goes up); do not auto-fill.
+			boolean up = event.hasShiftDown();
+			ClientCommandSuggestions.cycle(up ? -1 : 1);
 			cir.setReturnValue(true);
 			return;
 		}

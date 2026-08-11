@@ -78,118 +78,242 @@ public final class ClientCommandSuggestions {
 		int argStart = prefix.length() + parts[0].length() + 1;
 
 		if (cmd.equals("color") || cmd.equals("colors")) {
-			if (parts.length == 1 || (parts.length == 2 && !trailingSpace)) {
-				String partial = parts.length == 1 ? "" : parts[1].toLowerCase(Locale.ROOT);
-				addMatching(options, partial, "primary", "friend", "gui", "save", "delete");
-				return finish(options, partial, argStart);
+			return suggestColor(prefix, parts, trailingSpace, argStart, options);
+		}
+		if (cmd.equals("gui") || cmd.equals("clickgui")) {
+			return suggestGui(prefix, parts, trailingSpace, argStart, options);
+		}
+		if (cmd.equals("module")) {
+			return suggestModule(prefix, parts, trailingSpace, argStart, options);
+		}
+		if (cmd.equals("visualrange")) {
+			return suggestVisualRange(prefix, parts, trailingSpace, argStart, options);
+		}
+		if (cmd.equals("totempopnotifier") || cmd.equals("tpn")) {
+			return suggestTotemPop(prefix, parts, trailingSpace, argStart, options);
+		}
+		if (cmd.equals("friend") || cmd.equals("friends")) {
+			return suggestFriend(prefix, parts, trailingSpace, argStart, options);
+		}
+		if (cmd.equals("help")) {
+			return inactive();
+		}
+
+		return inactive();
+	}
+
+	private static SuggestionResult suggestColor(
+		String prefix, String[] parts, boolean trailingSpace, int argStart, List<String> options
+	) {
+		if (parts.length == 1 || (parts.length == 2 && !trailingSpace)) {
+			String partial = parts.length == 1 ? "" : parts[1].toLowerCase(Locale.ROOT);
+			addMatching(options, partial, "primary", "friend", "gui", "save", "delete");
+			return finish(options, partial, argStart);
+		}
+
+		String sub = parts[1].toLowerCase(Locale.ROOT);
+
+		if (sub.equals("save")) {
+			if (parts.length == 2 || (parts.length == 3 && !trailingSpace)) {
+				options.add("<hex>");
+				return finish(options, "", rangeStart(prefix, parts, trailingSpace, 2));
 			}
-			if (parts.length >= 2 && "save".equalsIgnoreCase(parts[1])) {
-				if (parts.length == 2 || (parts.length == 3 && !trailingSpace)) {
-					options.add("<hex>");
-					return finish(options, "", rangeStart(prefix, parts, trailingSpace, 2));
-				}
+			if (parts.length == 3 || (parts.length == 4 && !trailingSpace)) {
 				options.add("<name>");
 				return finish(options, "", rangeStart(prefix, parts, trailingSpace, 3));
 			}
-			if (parts.length >= 2 && "delete".equalsIgnoreCase(parts[1])) {
-				String partial = parts.length == 2 ? "" : parts[2].toLowerCase(Locale.ROOT);
+			return inactive();
+		}
+
+		if (sub.equals("delete")) {
+			if (parts.length >= 3 && !trailingSpace) {
+				// Name may be complete — still allow editing/filtering.
+			}
+			if (parts.length == 2 || (parts.length == 3 && !trailingSpace) || (parts.length >= 3 && !trailingSpace)) {
+				String partial = parts.length == 2 ? "" : String.join(" ", java.util.Arrays.copyOfRange(parts, 2, parts.length)).toLowerCase(Locale.ROOT);
 				for (String name : dark.noti.client.util.SavedColors.names()) {
 					if (partial.isEmpty() || name.toLowerCase(Locale.ROOT).startsWith(partial)) {
 						options.add(name);
 					}
 				}
-				return finish(options, partial, rangeStart(prefix, parts, trailingSpace, 2));
-			}
-			if (parts.length == 2 || (parts.length == 3 && !trailingSpace)) {
-				String partial = parts.length == 2 ? "" : parts[2].toLowerCase(Locale.ROOT);
-				addMatching(options, partial, "reset", "<hex>");
-				return finish(options, partial, rangeStart(prefix, parts, trailingSpace, 2));
-			}
-			options.add("<hex>");
-			return finish(options, "", rangeStart(prefix, parts, trailingSpace, 2));
-		}
-
-		if (cmd.equals("gui") || cmd.equals("clickgui")) {
-			if (parts.length == 1 || (parts.length == 2 && !trailingSpace)) {
-				String partial = parts.length == 1 ? "" : parts[1].toLowerCase(Locale.ROOT);
-				addMatching(options, partial, "position", "size", "keybind");
-				return finish(options, partial, argStart);
-			}
-			String sub = parts[1].toLowerCase(Locale.ROOT);
-			if (sub.equals("position")) {
-				String partial = parts.length == 2 ? "" : parts[2].toLowerCase(Locale.ROOT);
-				addMatching(options, partial, "reset");
-				return finish(options, partial, rangeStart(prefix, parts, trailingSpace, 2));
-			}
-			if (sub.equals("size")) {
-				options.add("<0.5-2.0>");
-				return finish(options, "", rangeStart(prefix, parts, trailingSpace, 2));
-			}
-			if (sub.equals("keybind")) {
-				String partial = parts.length == 2 ? "" : parts[2].toLowerCase(Locale.ROOT);
-				addMatching(options, partial, KEYBIND_SUGGESTIONS);
+				if (options.isEmpty()) {
+					options.add("<name>");
+				}
 				return finish(options, partial, rangeStart(prefix, parts, trailingSpace, 2));
 			}
 			return inactive();
 		}
 
-		if (cmd.equals("module")) {
-			if (parts.length == 1 || (parts.length == 2 && !trailingSpace)) {
-				String partial = parts.length == 1 ? "" : parts[1].toLowerCase(Locale.ROOT);
-				for (dark.noti.client.manager.Module module : ModuleManager.get().getAll()) {
-					String name = module.getName();
-					if (partial.isEmpty() || name.toLowerCase(Locale.ROOT).startsWith(partial)) {
-						options.add(name);
-					}
+		if (sub.equals("primary") || sub.equals("friend") || sub.equals("gui")) {
+			// .color gui reset  OR  .color gui <hex>  — reset is terminal
+			if (parts.length == 2 || (parts.length == 3 && !trailingSpace)) {
+				String partial = parts.length == 2 ? "" : parts[2].toLowerCase(Locale.ROOT);
+				if (parts.length == 3 && "reset".equals(partial)) {
+					return inactive();
 				}
-				return finish(options, partial, argStart);
+				if (parts.length == 3 && looksLikeHex(partial)) {
+					return inactive();
+				}
+				addMatching(options, partial, "reset", "<hex>");
+				return finish(options, partial, rangeStart(prefix, parts, trailingSpace, 2));
 			}
-			String partial = trailingSpace ? "" : parts[parts.length - 1].toLowerCase(Locale.ROOT);
-			addMatching(options, partial, "settingreset");
-			return finish(options, partial, rangeStart(prefix, parts, trailingSpace, parts.length - (trailingSpace ? 0 : 1)));
+			return inactive();
 		}
 
-		if (cmd.equals("visualrange")) {
-			if (parts.length == 1 || (parts.length == 2 && !trailingSpace)) {
-				String partial = parts.length == 1 ? "" : parts[1].toLowerCase(Locale.ROOT);
-				addMatching(options, partial, "ignorefakeplayer");
-				return finish(options, partial, argStart);
+		return inactive();
+	}
+
+	private static SuggestionResult suggestGui(
+		String prefix, String[] parts, boolean trailingSpace, int argStart, List<String> options
+	) {
+		if (parts.length == 1 || (parts.length == 2 && !trailingSpace)) {
+			String partial = parts.length == 1 ? "" : parts[1].toLowerCase(Locale.ROOT);
+			addMatching(options, partial, "position", "size", "keybind");
+			return finish(options, partial, argStart);
+		}
+
+		String sub = parts[1].toLowerCase(Locale.ROOT);
+		if (sub.equals("position")) {
+			if (parts.length == 2 || (parts.length == 3 && !trailingSpace)) {
+				String partial = parts.length == 2 ? "" : parts[2].toLowerCase(Locale.ROOT);
+				if (parts.length == 3 && "reset".equals(partial)) {
+					return inactive();
+				}
+				addMatching(options, partial, "reset");
+				return finish(options, partial, rangeStart(prefix, parts, trailingSpace, 2));
 			}
+			return inactive();
+		}
+		if (sub.equals("size")) {
+			if (parts.length == 2 || (parts.length == 3 && !trailingSpace)) {
+				String partial = parts.length == 2 ? "" : parts[2];
+				if (parts.length == 3 && !partial.isEmpty()) {
+					return inactive();
+				}
+				options.add("<0.5-2.0>");
+				return finish(options, "", rangeStart(prefix, parts, trailingSpace, 2));
+			}
+			return inactive();
+		}
+		if (sub.equals("keybind")) {
+			if (parts.length == 2 || (parts.length == 3 && !trailingSpace)) {
+				String partial = parts.length == 2 ? "" : parts[2].toLowerCase(Locale.ROOT);
+				if (parts.length == 3 && exactKeybind(partial)) {
+					return inactive();
+				}
+				addMatching(options, partial, KEYBIND_SUGGESTIONS);
+				return finish(options, partial, rangeStart(prefix, parts, trailingSpace, 2));
+			}
+			return inactive();
+		}
+		return inactive();
+	}
+
+	private static SuggestionResult suggestModule(
+		String prefix, String[] parts, boolean trailingSpace, int argStart, List<String> options
+	) {
+		if (parts.length == 1 || (parts.length == 2 && !trailingSpace)) {
+			String partial = parts.length == 1 ? "" : parts[1].toLowerCase(Locale.ROOT);
+			for (dark.noti.client.manager.Module module : ModuleManager.get().getAll()) {
+				String name = module.getName();
+				if (partial.isEmpty() || name.toLowerCase(Locale.ROOT).startsWith(partial)) {
+					options.add(name);
+				}
+			}
+			return finish(options, partial, argStart);
+		}
+		if (parts.length == 2 || (parts.length == 3 && !trailingSpace)) {
 			String partial = parts.length == 2 ? "" : parts[2].toLowerCase(Locale.ROOT);
+			if (parts.length == 3 && "settingreset".equals(partial)) {
+				return inactive();
+			}
+			addMatching(options, partial, "settingreset");
+			return finish(options, partial, rangeStart(prefix, parts, trailingSpace, 2));
+		}
+		return inactive();
+	}
+
+	private static SuggestionResult suggestVisualRange(
+		String prefix, String[] parts, boolean trailingSpace, int argStart, List<String> options
+	) {
+		if (parts.length == 1 || (parts.length == 2 && !trailingSpace)) {
+			String partial = parts.length == 1 ? "" : parts[1].toLowerCase(Locale.ROOT);
+			addMatching(options, partial, "ignorefakeplayer");
+			return finish(options, partial, argStart);
+		}
+		if (parts.length == 2 || (parts.length == 3 && !trailingSpace)) {
+			String partial = parts.length == 2 ? "" : parts[2].toLowerCase(Locale.ROOT);
+			if (parts.length == 3 && (partial.equals("true") || partial.equals("false"))) {
+				return inactive();
+			}
 			addMatching(options, partial, "true", "false");
 			return finish(options, partial, rangeStart(prefix, parts, trailingSpace, 2));
 		}
+		return inactive();
+	}
 
-		if (cmd.equals("totempopnotifier") || cmd.equals("tpn")) {
-			if (parts.length == 1 || (parts.length == 2 && !trailingSpace)) {
-				String partial = parts.length == 1 ? "" : parts[1].toLowerCase(Locale.ROOT);
-				addMatching(options, partial, "player");
-				return finish(options, partial, argStart);
-			}
-			if (parts.length == 2 || (parts.length == 3 && !trailingSpace)) {
+	private static SuggestionResult suggestTotemPop(
+		String prefix, String[] parts, boolean trailingSpace, int argStart, List<String> options
+	) {
+		if (parts.length == 1 || (parts.length == 2 && !trailingSpace)) {
+			String partial = parts.length == 1 ? "" : parts[1].toLowerCase(Locale.ROOT);
+			addMatching(options, partial, "player");
+			return finish(options, partial, argStart);
+		}
+		if (!"player".equalsIgnoreCase(parts[1])) {
+			return inactive();
+		}
+		if (parts.length == 2 || (parts.length == 3 && !trailingSpace)) {
+			String partial = parts.length == 2 ? "" : parts[2];
+			if (parts.length == 3 && !partial.isEmpty()) {
+				// ign typed — next arg is count
+				if (!trailingSpace) {
+					return inactive();
+				}
+			} else {
 				options.add("<ign>");
 				return finish(options, "", rangeStart(prefix, parts, trailingSpace, 2));
 			}
-			if (parts.length == 3 || (parts.length == 4 && !trailingSpace)) {
-				String partial = parts.length == 3 ? "" : parts[3].toLowerCase(Locale.ROOT);
-				addMatching(options, partial, "count");
-				return finish(options, partial, rangeStart(prefix, parts, trailingSpace, 3));
+		}
+		if (parts.length == 3 || (parts.length == 4 && !trailingSpace)) {
+			String partial = parts.length == 3 ? "" : parts[3].toLowerCase(Locale.ROOT);
+			if (parts.length == 4 && "count".equals(partial)) {
+				return inactive();
+			}
+			addMatching(options, partial, "count");
+			return finish(options, partial, rangeStart(prefix, parts, trailingSpace, 3));
+		}
+		if (parts.length == 4 || (parts.length == 5 && !trailingSpace)) {
+			if (!"count".equalsIgnoreCase(parts[3])) {
+				return inactive();
 			}
 			String partial = parts.length == 4 ? "" : parts[4].toLowerCase(Locale.ROOT);
+			if (parts.length == 5 && "reset".equals(partial)) {
+				return inactive();
+			}
 			addMatching(options, partial, "reset");
 			return finish(options, partial, rangeStart(prefix, parts, trailingSpace, 4));
 		}
+		return inactive();
+	}
 
-		if (cmd.equals("friend") || cmd.equals("friends")) {
-			if (parts.length == 1 || (parts.length == 2 && !trailingSpace)) {
-				String partial = parts.length == 1 ? "" : parts[1].toLowerCase(Locale.ROOT);
-				addMatching(options, partial, "add", "delete", "list");
-				return finish(options, partial, argStart);
-			}
-			String sub = parts[1].toLowerCase(Locale.ROOT);
-			if (sub.equals("add") || sub.equals("delete") || sub.equals("del") || sub.equals("remove")) {
+	private static SuggestionResult suggestFriend(
+		String prefix, String[] parts, boolean trailingSpace, int argStart, List<String> options
+	) {
+		if (parts.length == 1 || (parts.length == 2 && !trailingSpace)) {
+			String partial = parts.length == 1 ? "" : parts[1].toLowerCase(Locale.ROOT);
+			addMatching(options, partial, "add", "delete", "list");
+			return finish(options, partial, argStart);
+		}
+
+		String sub = parts[1].toLowerCase(Locale.ROOT);
+		if (sub.equals("list")) {
+			return inactive();
+		}
+		if (sub.equals("add") || sub.equals("delete") || sub.equals("del") || sub.equals("remove")) {
+			if (parts.length == 2 || (parts.length == 3 && !trailingSpace)) {
+				String partial = parts.length == 2 ? "" : parts[2].toLowerCase(Locale.ROOT);
 				if (sub.equals("delete") || sub.equals("del") || sub.equals("remove")) {
-					String partial = parts.length == 2 ? "" : parts[2].toLowerCase(Locale.ROOT);
 					for (String name : dark.noti.client.util.SocialLists.friends()) {
 						if (partial.isEmpty() || name.toLowerCase(Locale.ROOT).startsWith(partial)) {
 							options.add(name);
@@ -198,17 +322,23 @@ public final class ClientCommandSuggestions {
 					if (options.isEmpty()) {
 						options.add("<ign>");
 					}
+					if (parts.length == 3 && options.stream().anyMatch(o -> o.equalsIgnoreCase(parts[2]))) {
+						return inactive();
+					}
 					return finish(options, partial, rangeStart(prefix, parts, trailingSpace, 2));
+				}
+				if (parts.length == 3 && !partial.isEmpty()) {
+					return inactive();
 				}
 				options.add("<ign>");
 				return finish(options, "", rangeStart(prefix, parts, trailingSpace, 2));
 			}
 			return inactive();
 		}
-
 		return inactive();
 	}
 
+	/** Mouse click still fills the selected option. */
 	public static String complete(String input) {
 		SuggestionResult result = suggest(input);
 		if (!result.active()) {
@@ -237,8 +367,32 @@ public final class ClientCommandSuggestions {
 			}
 			out.append(parts[i]);
 		}
-		out.append(' ').append(chosen).append(' ');
+		out.append(' ').append(chosen);
+		// No trailing space — avoids jumping into a leftover placeholder arg.
 		return out.toString();
+	}
+
+	private static boolean looksLikeHex(String value) {
+		String v = value.startsWith("#") ? value.substring(1) : value;
+		if (v.length() != 6 && v.length() != 8) {
+			return false;
+		}
+		for (int i = 0; i < v.length(); i++) {
+			char c = v.charAt(i);
+			if (Character.digit(c, 16) < 0) {
+				return false;
+			}
+		}
+		return true;
+	}
+
+	private static boolean exactKeybind(String partial) {
+		for (String key : KEYBIND_SUGGESTIONS) {
+			if (key.equals(partial)) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	private static int rangeStart(String prefix, String[] parts, boolean trailingSpace, int partIndex) {
@@ -252,7 +406,7 @@ public final class ClientCommandSuggestions {
 
 	private static void addMatching(List<String> options, String partial, String... values) {
 		for (String value : values) {
-			if (partial.isEmpty() || value.startsWith(partial)) {
+			if (partial.isEmpty() || value.toLowerCase(Locale.ROOT).startsWith(partial.toLowerCase(Locale.ROOT))) {
 				options.add(value);
 			}
 		}

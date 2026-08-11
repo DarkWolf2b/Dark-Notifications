@@ -24,7 +24,7 @@ public class BindSetting extends Setting<Integer> {
 	public String display() {
 		int key = getKey();
 		if (key <= 0 || key == GLFW.GLFW_KEY_UNKNOWN) {
-			return "None";
+			return "NONE";
 		}
 		return switch (key) {
 			case GLFW.GLFW_KEY_RIGHT_SHIFT -> "Right Shift";

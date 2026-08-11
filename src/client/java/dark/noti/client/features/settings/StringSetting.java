@@ -28,6 +28,6 @@ public final class StringSetting extends Setting<String> {
 	}
 
 	public String display() {
-		return get().isEmpty() ? "<empty>" : get();
+		return get().isEmpty() ? "NONE" : get();
 	}
 }
