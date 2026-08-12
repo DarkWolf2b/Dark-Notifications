@@ -17,13 +17,17 @@ import net.minecraft.world.entity.player.Player;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 public final class TotemPopNotifierModule extends Module {
 	public static TotemPopNotifierModule INSTANCE;
 
 	private static final int DEFAULT_PREFIX = 0xFFB57BEA;
+	/** Ignore duplicate status packets for the same pop. */
+	private static final long DUP_MS = 100L;
 
 	private final SectionSetting targetsSection = add(new SectionSetting("Targets", false));
 	private final BoolSetting players = add(new BoolSetting("Players", true));
@@ -63,7 +67,9 @@ public final class TotemPopNotifierModule extends Module {
 
 	private final Map<UUID, Integer> totemPops = new HashMap<>();
 	private final Map<UUID, Long> lastPopMs = new HashMap<>();
+	private final Map<UUID, Long> lastEventMs = new HashMap<>();
 	private final Map<UUID, String> lastNames = new HashMap<>();
+	private final Set<UUID> deadPlayers = new HashSet<>();
 
 	public TotemPopNotifierModule() {
 		super("TotemPopNotifier", Category.NOTIFICATIONS);
@@ -111,12 +117,19 @@ public final class TotemPopNotifierModule extends Module {
 	}
 
 	@Override
-	public void onDisable() {
-		totemPops.clear();
-		lastPopMs.clear();
-		lastNames.clear();
+	protected void onDisable() {
+		clearAll();
 	}
 
+	private void clearAll() {
+		totemPops.clear();
+		lastPopMs.clear();
+		lastEventMs.clear();
+		lastNames.clear();
+		deadPlayers.clear();
+	}
+
+	/** Totem status packet (35 / PROTECTED_FROM_DEATH). */
 	public static void onPlayerTotemPop(Player player) {
 		TotemPopNotifierModule notifier = INSTANCE;
 		if (notifier == null || !notifier.isEnabled() || player == null) {
@@ -131,6 +144,15 @@ public final class TotemPopNotifierModule extends Module {
 			return;
 		}
 		notifier.onTotemPop(player.getUUID(), name);
+	}
+
+	/** Death animation / confirmed death — resets this player's pop streak. */
+	public static void onPlayerDeath(Player player) {
+		TotemPopNotifierModule notifier = INSTANCE;
+		if (notifier == null || player == null) {
+			return;
+		}
+		notifier.resetCount(player.getUUID());
 	}
 
 	public void onTotemPop(UUID playerUuid, String playerName) {
@@ -153,13 +175,22 @@ public final class TotemPopNotifierModule extends Module {
 			return;
 		}
 
+		long now = System.currentTimeMillis();
+		Long lastEvent = lastEventMs.get(playerUuid);
+		if (lastEvent != null && now - lastEvent < DUP_MS) {
+			return;
+		}
+		lastEventMs.put(playerUuid, now);
+
+		// Alive again after a death — ensure streak starts fresh.
+		deadPlayers.remove(playerUuid);
+
 		SocialLists.observe(playerUuid, playerName);
 
 		int count = totemPops.getOrDefault(playerUuid, 0) + 1;
 		totemPops.put(playerUuid, count);
 		lastNames.put(playerUuid, playerName);
 
-		long now = System.currentTimeMillis();
 		boolean replace = false;
 		if (stack.getValue()) {
 			Long last = lastPopMs.get(playerUuid);
@@ -170,13 +201,48 @@ public final class TotemPopNotifierModule extends Module {
 		sendMessage(playerUuid, playerName, count, replace, isSelf, isFriend);
 	}
 
+	@Override
+	public void onTick() {
+		Minecraft client = Minecraft.getInstance();
+		LocalPlayer local = client.player;
+		if (local == null || client.level == null) {
+			clearAll();
+			return;
+		}
+
+		Set<UUID> seen = new HashSet<>();
+		for (Player other : client.level.players()) {
+			UUID uuid = other.getUUID();
+			seen.add(uuid);
+			boolean dead = other.isDeadOrDying() || other.getHealth() <= 0.0f;
+			if (dead) {
+				if (deadPlayers.add(uuid)) {
+					resetCount(uuid);
+				}
+			} else {
+				deadPlayers.remove(uuid);
+			}
+		}
+		deadPlayers.removeIf(uuid -> !seen.contains(uuid));
+	}
+
+	public void resetCount(UUID uuid) {
+		if (uuid == null) {
+			return;
+		}
+		totemPops.remove(uuid);
+		lastPopMs.remove(uuid);
+		lastEventMs.remove(uuid);
+		ChatNotify.clearStack(stackKey(uuid));
+	}
+
 	private boolean allows(Player player, String name) {
 		Minecraft client = Minecraft.getInstance();
 		LocalPlayer local = client.player;
 		if (local != null && player.getUUID().equals(local.getUUID())) {
 			return self.getValue();
 		}
-		if (SocialLists.isFriend(player)) {
+		if (SocialLists.isFriend(player) || SocialLists.isFriend(name)) {
 			return friends.getValue();
 		}
 		return players.getValue();
@@ -191,10 +257,9 @@ public final class TotemPopNotifierModule extends Module {
 		for (UUID uuid : new ArrayList<>(lastNames.keySet())) {
 			String known = lastNames.get(uuid);
 			if (known != null && known.equalsIgnoreCase(needle)) {
-				totemPops.remove(uuid);
-				lastPopMs.remove(uuid);
+				resetCount(uuid);
 				lastNames.remove(uuid);
-				ChatNotify.clearStack(stackKey(uuid));
+				deadPlayers.remove(uuid);
 				cleared = true;
 			}
 		}
