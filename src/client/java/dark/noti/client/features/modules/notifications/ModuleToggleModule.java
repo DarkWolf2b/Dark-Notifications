@@ -9,25 +9,19 @@ import dark.noti.client.features.settings.NumberSetting;
 import dark.noti.client.features.settings.SectionSetting;
 import dark.noti.client.features.settings.StringSetting;
 import dark.noti.client.util.ChatNotify;
-import dark.noti.client.util.ClientDetector;
-import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 
 import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.Map;
 
-public final class CCMNotifierModule extends Module {
-	public static CCMNotifierModule INSTANCE;
+public final class ModuleToggleModule extends Module {
+	public static ModuleToggleModule INSTANCE;
 
 	private static final int DEFAULT_PREFIX = 0xFFB57BEA;
 	private static final int DEFAULT_ENABLE = 0xFF55FF55;
 	private static final int DEFAULT_DISABLE = 0xFFFF5555;
 
 	private final ModeSetting mode = add(new ModeSetting("Mode", "Icon", "Icon", "Text"));
-
-	private final SectionSetting targetsSection = add(new SectionSetting("Targets", false));
-	private final Map<String, BoolSetting> targetToggles = new LinkedHashMap<>();
 
 	private final SectionSetting generalSection = add(new SectionSetting("General", false));
 	private final BoolSetting notifyEnable = add(new BoolSetting("NotifyEnable", true));
@@ -54,18 +48,10 @@ public final class CCMNotifierModule extends Module {
 	private final ColorSetting offColor = add(new ColorSetting("OffColor", DEFAULT_DISABLE));
 
 	private final Map<String, Long> lastToggleMs = new HashMap<>();
-	private boolean publishing;
 
-	public CCMNotifierModule() {
-		super("CCMNotifier", Category.NOTIFICATIONS);
+	public ModuleToggleModule() {
+		super("ModuleToggle", Category.NOTIFICATIONS);
 		INSTANCE = this;
-
-		for (String client : ClientDetector.CCM_TARGETS) {
-			boolean def = client.equals(ClientDetector.DARK);
-			BoolSetting toggle = new BoolSetting(client, def);
-			targetToggles.put(client, toggle);
-			targetsSection.addSetting(toggle);
-		}
 
 		generalSection.addSetting(notifyEnable);
 		generalSection.addSetting(notifyDisable);
@@ -104,7 +90,6 @@ public final class CCMNotifierModule extends Module {
 
 	private void syncModeSections() {
 		boolean iconMode = mode.is("Icon");
-		// Icon mode only needs icon colors; Text mode only needs text colors.
 		iconSection.setHidden(!iconMode);
 		textSection.setHidden(iconMode);
 	}
@@ -114,61 +99,15 @@ public final class CCMNotifierModule extends Module {
 		lastToggleMs.clear();
 	}
 
-	public boolean isClientTargeted(String clientName) {
-		if (clientName == null) {
-			return false;
-		}
-		BoolSetting toggle = targetToggles.get(clientName);
-		if (toggle != null) {
-			return toggle.getValue();
-		}
-		if (clientName.equalsIgnoreCase(ClientDetector.DARK) || clientName.equalsIgnoreCase("Dark")) {
-			BoolSetting dark = targetToggles.get(ClientDetector.DARK);
-			return dark != null && dark.getValue();
-		}
-		for (Map.Entry<String, BoolSetting> e : targetToggles.entrySet()) {
-			if (e.getKey().equalsIgnoreCase(clientName)) {
-				return e.getValue().getValue();
-			}
-		}
-		return false;
-	}
-
 	public static void onModuleToggled(Module module) {
-		CCMNotifierModule notifier = INSTANCE;
+		ModuleToggleModule notifier = INSTANCE;
 		if (notifier == null || !notifier.isEnabled() || module == null) {
 			return;
 		}
 		if (module == notifier) {
 			return;
 		}
-		if (!notifier.isClientTargeted(ClientDetector.DARK)) {
-			return;
-		}
 		notifier.notifyToggle(module.getName(), module.isEnabled());
-	}
-
-	/** Called for every chat line; relays targeted toggles from other clients. */
-	public static void onChatMessage(Component message) {
-		CCMNotifierModule notifier = INSTANCE;
-		if (notifier == null || !notifier.isEnabled() || message == null || notifier.publishing) {
-			return;
-		}
-		ClientDetector.ToggleHit hit = ClientDetector.parseToggle(message.getString());
-		if (hit == null) {
-			return;
-		}
-		// Local Dark toggles are handled via onModuleToggled — skip echo.
-		if (hit.client().equals(ClientDetector.DARK)) {
-			return;
-		}
-		if (!ClientDetector.isKnownCcmTarget(hit.client())) {
-			return;
-		}
-		if (!notifier.isClientTargeted(hit.client())) {
-			return;
-		}
-		notifier.notifyToggle(hit.module(), hit.enabled());
 	}
 
 	private void notifyToggle(String moduleName, boolean enabled) {
@@ -189,15 +128,10 @@ public final class CCMNotifierModule extends Module {
 			? buildTextMessage(moduleName, enabled)
 			: buildIconMessage(moduleName, enabled);
 
-		publishing = true;
-		try {
-			if (merge.getValue()) {
-				ChatNotify.sendStacked(message, stackKey(moduleName), replace);
-			} else {
-				ChatNotify.send(message);
-			}
-		} finally {
-			publishing = false;
+		if (merge.getValue()) {
+			ChatNotify.sendStacked(message, stackKey(moduleName), replace);
+		} else {
+			ChatNotify.send(message);
 		}
 	}
 
@@ -224,6 +158,6 @@ public final class CCMNotifierModule extends Module {
 	}
 
 	private static String stackKey(String moduleName) {
-		return "ccm:" + moduleName.toLowerCase();
+		return "moduletoggle:" + moduleName.toLowerCase();
 	}
 }

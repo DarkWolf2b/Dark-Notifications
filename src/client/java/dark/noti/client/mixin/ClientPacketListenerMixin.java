@@ -17,7 +17,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(ClientPacketListener.class)
 public class ClientPacketListenerMixin {
-	@Inject(method = "handleEntityEvent", at = @At("HEAD"))
+	@Inject(method = "handleEntityEvent", at = @At("TAIL"))
 	private void darkNoti$totemPop(ClientboundEntityEventPacket packet, CallbackInfo ci) {
 		Minecraft client = Minecraft.getInstance();
 		if (client.level == null) {
@@ -32,7 +32,6 @@ public class ClientPacketListenerMixin {
 			TotemPopNotifierModule.onPlayerTotemPop(player);
 			DeathNotifierModule.onPlayerTotemPop(player);
 		} else if (eventId == EntityEvent.DEATH) {
-			// Reset pop streak as soon as the death animation packet arrives.
 			TotemPopNotifierModule.onPlayerDeath(player);
 		}
 	}

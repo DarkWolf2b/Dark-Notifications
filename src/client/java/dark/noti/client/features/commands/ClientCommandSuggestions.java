@@ -1,14 +1,24 @@
 package dark.noti.client.features.commands;
 
 import dark.noti.client.manager.ModuleManager;
+import net.minecraft.util.Mth;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
+/**
+ * Client-command autocomplete modeled on vanilla {@code CommandSuggestions}.
+ */
 public final class ClientCommandSuggestions {
+	public static final int LINE_LIMIT = 10;
+	public static final int ROW_HEIGHT = 12;
+
 	private static int selectedIndex;
+	private static int scrollOffset;
 	private static String lastInput = "";
+	private static double lastMouseX = Double.NaN;
+	private static double lastMouseY = Double.NaN;
 
 	private static final String[] KEYBIND_SUGGESTIONS = {
 		"right_shift", "left_shift", "right_ctrl", "left_ctrl", "right_alt", "left_alt",
@@ -26,7 +36,10 @@ public final class ClientCommandSuggestions {
 	public static void onInputChanged(String input) {
 		if (input == null || !input.equals(lastInput)) {
 			selectedIndex = 0;
+			scrollOffset = 0;
 			lastInput = input == null ? "" : input;
+			lastMouseX = Double.NaN;
+			lastMouseY = Double.NaN;
 		}
 	}
 
@@ -34,18 +47,62 @@ public final class ClientCommandSuggestions {
 		SuggestionResult result = suggest(lastInput);
 		if (!result.active()) {
 			selectedIndex = 0;
+			scrollOffset = 0;
 			return;
 		}
 		selectedIndex = Math.floorMod(selectedIndex + delta, result.options.size());
+		ensureVisible(result.options.size());
 	}
 
 	public static void select(int index) {
 		SuggestionResult result = suggest(lastInput);
 		if (!result.active()) {
 			selectedIndex = 0;
+			scrollOffset = 0;
 			return;
 		}
 		selectedIndex = Math.floorMod(index, result.options.size());
+		ensureVisible(result.options.size());
+	}
+
+	/** Mouse wheel over the suggestion box — scrolls the window, or cycles when everything fits. */
+	public static boolean mouseScrolled(double amount, int optionCount) {
+		if (optionCount <= 0) {
+			return false;
+		}
+		if (optionCount <= LINE_LIMIT) {
+			cycle(-(int) Math.signum(amount));
+			return true;
+		}
+		int maxOffset = Math.max(0, optionCount - LINE_LIMIT);
+		scrollOffset = Mth.clamp(scrollOffset - (int) Math.signum(amount), 0, maxOffset);
+		return true;
+	}
+
+	/** Hover selection when the cursor is over a row. */
+	public static void updateHover(double mouseX, double mouseY, int boxX, int boxY, int boxW, int visibleRows, int optionCount) {
+		boolean moved = Double.isNaN(lastMouseX) || lastMouseX != mouseX || lastMouseY != mouseY;
+		lastMouseX = mouseX;
+		lastMouseY = mouseY;
+		if (!moved || optionCount <= 0 || visibleRows <= 0) {
+			return;
+		}
+		if (mouseX < boxX || mouseX >= boxX + boxW) {
+			return;
+		}
+		int relative = (int) ((mouseY - boxY) / ROW_HEIGHT);
+		if (relative < 0 || relative >= visibleRows) {
+			return;
+		}
+		int index = scrollOffset + relative;
+		if (index >= 0 && index < optionCount) {
+			selectedIndex = index;
+		}
+	}
+
+	/** Tab cycles the highlight only (click / Enter-style fill is separate). */
+	public static void tabCycle(boolean shift) {
+		cycle(shift ? -1 : 1);
 	}
 
 	public static SuggestionResult suggest(String input) {
@@ -60,6 +117,10 @@ public final class ClientCommandSuggestions {
 		}
 
 		String body = input.substring(prefix.length());
+		// Bare prefix (".") shows commands like "/". Prefix + only spaces does not.
+		if (!body.isEmpty() && body.trim().isEmpty()) {
+			return inactive();
+		}
 		boolean trailingSpace = !body.isEmpty() && body.charAt(body.length() - 1) == ' ';
 		String trimmed = body.trim();
 		String[] parts = trimmed.isEmpty() ? new String[0] : trimmed.split("\\s+");
@@ -126,9 +187,6 @@ public final class ClientCommandSuggestions {
 		}
 
 		if (sub.equals("delete")) {
-			if (parts.length >= 3 && !trailingSpace) {
-				// Name may be complete — still allow editing/filtering.
-			}
 			if (parts.length == 2 || (parts.length == 3 && !trailingSpace) || (parts.length >= 3 && !trailingSpace)) {
 				String partial = parts.length == 2 ? "" : String.join(" ", java.util.Arrays.copyOfRange(parts, 2, parts.length)).toLowerCase(Locale.ROOT);
 				for (String name : dark.noti.client.util.SavedColors.names()) {
@@ -145,17 +203,25 @@ public final class ClientCommandSuggestions {
 		}
 
 		if (sub.equals("primary") || sub.equals("friend") || sub.equals("gui")) {
-			// .color gui reset  OR  .color gui <hex>  — reset is terminal
+			// .color gui → reset | hex
 			if (parts.length == 2 || (parts.length == 3 && !trailingSpace)) {
 				String partial = parts.length == 2 ? "" : parts[2].toLowerCase(Locale.ROOT);
 				if (parts.length == 3 && "reset".equals(partial)) {
 					return inactive();
 				}
-				if (parts.length == 3 && looksLikeHex(partial)) {
+				if (parts.length == 3 && "hex".equals(partial)) {
 					return inactive();
 				}
-				addMatching(options, partial, "reset", "<hex>");
+				addMatching(options, partial, "reset", "hex");
 				return finish(options, partial, rangeStart(prefix, parts, trailingSpace, 2));
+			}
+			// .color gui hex → then type the code
+			if (parts.length >= 3 && parts[2].equalsIgnoreCase("hex")) {
+				if (parts.length == 3 && trailingSpace) {
+					options.add("<hexcode>");
+					return finish(options, "", rangeStart(prefix, parts, trailingSpace, 3));
+				}
+				return inactive();
 			}
 			return inactive();
 		}
@@ -266,7 +332,6 @@ public final class ClientCommandSuggestions {
 		if (parts.length == 2 || (parts.length == 3 && !trailingSpace)) {
 			String partial = parts.length == 2 ? "" : parts[2];
 			if (parts.length == 3 && !partial.isEmpty()) {
-				// ign typed — next arg is count
 				if (!trailingSpace) {
 					return inactive();
 				}
@@ -338,7 +403,7 @@ public final class ClientCommandSuggestions {
 		return inactive();
 	}
 
-	/** Mouse click still fills the selected option. */
+	/** Mouse click / Tab fill the selected option. */
 	public static String complete(String input) {
 		SuggestionResult result = suggest(input);
 		if (!result.active()) {
@@ -368,22 +433,21 @@ public final class ClientCommandSuggestions {
 			out.append(parts[i]);
 		}
 		out.append(' ').append(chosen);
-		// No trailing space — avoids jumping into a leftover placeholder arg.
+		// After "hex", leave a space so the user can type the code.
+		if (chosen.equalsIgnoreCase("hex")) {
+			out.append(' ');
+		}
 		return out.toString();
 	}
 
-	private static boolean looksLikeHex(String value) {
-		String v = value.startsWith("#") ? value.substring(1) : value;
-		if (v.length() != 6 && v.length() != 8) {
-			return false;
+	private static void ensureVisible(int optionCount) {
+		int maxOffset = Math.max(0, optionCount - LINE_LIMIT);
+		if (selectedIndex < scrollOffset) {
+			scrollOffset = selectedIndex;
+		} else if (selectedIndex >= scrollOffset + LINE_LIMIT) {
+			scrollOffset = selectedIndex - LINE_LIMIT + 1;
 		}
-		for (int i = 0; i < v.length(); i++) {
-			char c = v.charAt(i);
-			if (Character.digit(c, 16) < 0) {
-				return false;
-			}
-		}
-		return true;
+		scrollOffset = Mth.clamp(scrollOffset, 0, maxOffset);
 	}
 
 	private static boolean exactKeybind(String partial) {
@@ -415,26 +479,32 @@ public final class ClientCommandSuggestions {
 	private static SuggestionResult finish(List<String> options, String partial, int start) {
 		if (options.isEmpty()) {
 			selectedIndex = 0;
+			scrollOffset = 0;
 			return inactive();
 		}
 		if (selectedIndex >= options.size()) {
 			selectedIndex = 0;
 		}
+		ensureVisible(options.size());
 		String selected = options.get(selectedIndex);
 		String ghost = "";
 		if (!selected.startsWith("<") && selected.toLowerCase(Locale.ROOT).startsWith(partial.toLowerCase(Locale.ROOT))) {
 			ghost = selected.substring(partial.length());
 		}
-		return new SuggestionResult(List.copyOf(options), ghost, selectedIndex, start);
+		return new SuggestionResult(List.copyOf(options), ghost, selectedIndex, start, scrollOffset);
 	}
 
 	private static SuggestionResult inactive() {
-		return new SuggestionResult(List.of(), "", -1, 0);
+		return new SuggestionResult(List.of(), "", -1, 0, 0);
 	}
 
-	public record SuggestionResult(List<String> options, String ghost, int selected, int start) {
+	public record SuggestionResult(List<String> options, String ghost, int selected, int start, int offset) {
 		public boolean active() {
 			return selected >= 0 && !options.isEmpty();
+		}
+
+		public int visibleCount() {
+			return Math.min(options.size(), LINE_LIMIT);
 		}
 	}
 }

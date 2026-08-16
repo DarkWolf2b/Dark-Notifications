@@ -24,7 +24,7 @@ public final class ClientCommandHandler {
 		new Command("clickgui", "Alias of .gui", ClientCommandHandler::gui),
 		new Command("module", "Module: <name> settingreset.", ClientCommandHandler::module),
 		new Command("colors", "Alias of .color", ClientCommandHandler::color),
-		new Command("color", "color: primary|friend|gui|save|delete ...", ClientCommandHandler::color),
+		new Command("color", "color: primary|friend|gui <reset|hex <code>> | save | delete", ClientCommandHandler::color),
 		new Command("visualrange", "VisualRange: ignorefakeplayer <true/false>", ClientCommandHandler::visualrange),
 		new Command("totempopnotifier", "TotemPopNotifier: player <ign> count reset", ClientCommandHandler::totempopnotifier),
 		new Command("tpn", "Alias of .totempopnotifier", ClientCommandHandler::totempopnotifier),
@@ -224,7 +224,12 @@ public final class ClientCommandHandler {
 				return;
 			}
 
-			String hex = parts[1];
+			String hex;
+			if (parts.length >= 3 && parts[1].equalsIgnoreCase("hex")) {
+				hex = parts[2];
+			} else {
+				hex = parts[1];
+			}
 			int color = parseHex(hex);
 
 			switch (target) {
@@ -264,7 +269,7 @@ public final class ClientCommandHandler {
 					setting.set(color);
 					send("Set GUI color to " + hex + ".");
 				}
-				default -> send("Usage: " + prefix() + "color <primary|friend|gui|save|delete> ...");
+				default -> send("Usage: " + prefix() + "color <primary|friend|gui> <reset|hex <code>>");
 			}
 		} catch (NumberFormatException e) {
 			send("Invalid hex code.");

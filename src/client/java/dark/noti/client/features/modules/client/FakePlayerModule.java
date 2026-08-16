@@ -332,18 +332,12 @@ public final class FakePlayerModule extends Module {
 		player.hurtTime = 0;
 		player.hurtDuration = 0;
 		player.deathTime = 0;
-		player.handleEntityEvent((byte) 35);
 		Minecraft client = Minecraft.getInstance();
 		if (client.level == null) {
 			return;
 		}
-		for (int i = 0; i < 30; i++) {
-			double vx = (client.level.getRandom().nextDouble() - 0.5D) * 2.0D;
-			double vy = (client.level.getRandom().nextDouble() * 2.0D);
-			double vz = (client.level.getRandom().nextDouble() - 0.5D) * 2.0D;
-			client.level.addParticle(ParticleTypes.TOTEM_OF_UNDYING,
-				player.getX(), player.getY() + player.getBbHeight() * 0.75D, player.getZ(), vx, vy, vz);
-		}
+		// Same as ClientPacketListener entity event 35: tracking emitter for 30 ticks.
+		client.particleEngine.createTrackingEmitter(player, ParticleTypes.TOTEM_OF_UNDYING, 30);
 		client.level.playLocalSound(player.getX(), player.getY(), player.getZ(),
 			SoundEvents.TOTEM_USE, player.getSoundSource(), 1.0F, 1.0F, false);
 	}

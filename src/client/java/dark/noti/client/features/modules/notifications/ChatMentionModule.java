@@ -1,12 +1,12 @@
 package dark.noti.client.features.modules.notifications;
 
-import dark.noti.client.manager.Category;
-import dark.noti.client.manager.Module;
-import dark.noti.client.manager.ModuleManager;
 import dark.noti.client.features.settings.BoolSetting;
 import dark.noti.client.features.settings.ColorSetting;
 import dark.noti.client.features.settings.ModeSetting;
 import dark.noti.client.features.settings.SectionSetting;
+import dark.noti.client.manager.Category;
+import dark.noti.client.manager.Module;
+import dark.noti.client.manager.ModuleManager;
 import dark.noti.client.util.SocialLists;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
@@ -30,6 +30,7 @@ public final class ChatMentionModule extends Module {
 	private final SectionSetting mentionSection = add(new SectionSetting("Mentions", false, highlightMentions));
 
 	private final BoolSetting ownMessages = add(new BoolSetting("OwnMessages", true));
+	private final ModeSetting ownTarget = add(new ModeSetting("Affect", "Both", "Name", "Message", "Both"));
 	private final BoolSetting bold = add(new BoolSetting("Bold", true));
 	private final BoolSetting color = add(new BoolSetting("Color", true));
 	private final ColorSetting ownColor = add(ColorSetting.forSelf("OwnColor"));
@@ -44,6 +45,7 @@ public final class ChatMentionModule extends Module {
 		mentionSection.addSetting(mentionColor);
 		mentionSection.addSetting(closeMatch);
 
+		ownSection.addSetting(ownTarget);
 		ownSection.addSetting(bold);
 		ownSection.addSetting(color);
 		ownSection.addSetting(ownColor);
@@ -78,15 +80,14 @@ public final class ChatMentionModule extends Module {
 			return original;
 		}
 
-		// Own chat: always restyle both the left name and the message body.
 		if (fromSelf && ownMessages.getValue()) {
 			return styleOwnMessage(parsed, plain);
 		}
 
 		if (parsed.sender != null && parsed.namePrefix != null) {
 			MutableComponent out = Component.empty();
-			out.append(styleName(parsed.namePrefix, parsed.sender, fromFriend, false, mentionsSelf));
-			out.append(styleBody(parsed.body, false, mentionsSelf));
+			out.append(styleName(parsed.namePrefix, parsed.sender, fromFriend, mentionsSelf));
+			out.append(styleBody(parsed.body, mentionsSelf, selfName));
 			return out;
 		}
 
@@ -95,7 +96,7 @@ public final class ChatMentionModule extends Module {
 		}
 		if (mentionsSelf && highlightMentions.getValue()) {
 			if (mentionTarget.is("Message") || mentionTarget.is("Both")) {
-				return styleWhole(plain, false, true);
+				return Component.literal(plain).setStyle(mentionStyle());
 			}
 			return highlightNameInText(plain, selfName);
 		}
@@ -103,14 +104,26 @@ public final class ChatMentionModule extends Module {
 	}
 
 	private Component styleOwnMessage(ParsedChat parsed, String plain) {
-		Style ownStyle = ownStyle();
+		boolean styleName = ownTarget.is("Name") || ownTarget.is("Both");
+		boolean styleMessage = ownTarget.is("Message") || ownTarget.is("Both");
+		Style style = ownStyle();
+
 		if (parsed.namePrefix != null) {
 			MutableComponent out = Component.empty();
-			out.append(Component.literal(parsed.namePrefix).setStyle(ownStyle));
-			out.append(Component.literal(parsed.body).setStyle(ownStyle));
+			out.append(part(parsed.namePrefix, styleName ? style : Style.EMPTY));
+			out.append(part(parsed.body, styleMessage ? style : Style.EMPTY));
 			return out;
 		}
-		return Component.literal(plain).setStyle(ownStyle);
+
+		// Flat line with no name/body split — only Message/Both can restyle it.
+		if (styleMessage) {
+			return Component.literal(plain).setStyle(style);
+		}
+		return Component.literal(plain);
+	}
+
+	private static Component part(String text, Style style) {
+		return Component.literal(text).setStyle(style);
 	}
 
 	private Style ownStyle() {
@@ -124,46 +137,29 @@ public final class ChatMentionModule extends Module {
 		return style;
 	}
 
-	private Component styleName(String namePrefix, String sender, boolean friend, boolean self, boolean mentioned) {
-		MutableComponent name = Component.literal(namePrefix);
-		if (self && ownMessages.getValue()) {
-			return name.setStyle(ownStyle());
-		}
+	private Style mentionStyle() {
+		return Style.EMPTY.withColor(TextColor.fromRgb(mentionColor.argb() & 0xFFFFFF));
+	}
+
+	private Component styleName(String namePrefix, String sender, boolean friend, boolean mentioned) {
 		Style style = Style.EMPTY;
 		if (friend && colorFriends.getValue()) {
 			style = style.withColor(TextColor.fromRgb(friendColor.argb() & 0xFFFFFF));
 		} else if (mentioned && highlightMentions.getValue()
 			&& (mentionTarget.is("Name") || mentionTarget.is("Both"))) {
-			style = style.withColor(TextColor.fromRgb(mentionColor.argb() & 0xFFFFFF));
+			style = mentionStyle();
 		}
-		return name.setStyle(style);
+		return Component.literal(namePrefix).setStyle(style);
 	}
 
-	private Component styleBody(String body, boolean self, boolean mentioned) {
-		if (self && ownMessages.getValue() && (bold.getValue() || color.getValue())) {
-			return Component.literal(body).setStyle(ownStyle());
+	private Component styleBody(String body, boolean mentioned, String selfName) {
+		if (!mentioned || !highlightMentions.getValue()) {
+			return Component.literal(body);
 		}
-		if (mentioned && highlightMentions.getValue()) {
-			Minecraft client = Minecraft.getInstance();
-			String selfName = client.player != null ? client.player.getName().getString() : "";
-			if (mentionTarget.is("Message") || mentionTarget.is("Both")) {
-				return Component.literal(body).withStyle(style ->
-					style.withColor(TextColor.fromRgb(mentionColor.argb() & 0xFFFFFF)));
-			}
-			return highlightNameInText(body, selfName);
+		if (mentionTarget.is("Message") || mentionTarget.is("Both")) {
+			return Component.literal(body).setStyle(mentionStyle());
 		}
-		return Component.literal(body);
-	}
-
-	private Component styleWhole(String plain, boolean self, boolean mentioned) {
-		if (self && ownMessages.getValue()) {
-			return Component.literal(plain).setStyle(ownStyle());
-		}
-		Style style = Style.EMPTY;
-		if (mentioned) {
-			style = style.withColor(TextColor.fromRgb(mentionColor.argb() & 0xFFFFFF));
-		}
-		return Component.literal(plain).setStyle(style);
+		return highlightNameInText(body, selfName);
 	}
 
 	private Component recolorContainingName(String plain, String sender, int argb) {
@@ -171,14 +167,14 @@ public final class ChatMentionModule extends Module {
 			return Component.literal(plain);
 		}
 		int idx = plain.toLowerCase(Locale.ROOT).indexOf(sender.toLowerCase(Locale.ROOT));
+		TextColor color = TextColor.fromRgb(argb & 0xFFFFFF);
 		if (idx < 0) {
-			return Component.literal(plain).withStyle(style ->
-				style.withColor(TextColor.fromRgb(argb & 0xFFFFFF)));
+			return Component.literal(plain).withStyle(style -> style.withColor(color));
 		}
 		MutableComponent out = Component.empty();
 		out.append(Component.literal(plain.substring(0, idx)));
 		out.append(Component.literal(plain.substring(idx, idx + sender.length()))
-			.withStyle(style -> style.withColor(TextColor.fromRgb(argb & 0xFFFFFF))));
+			.withStyle(style -> style.withColor(color)));
 		out.append(Component.literal(plain.substring(idx + sender.length())));
 		return out;
 	}
@@ -198,7 +194,7 @@ public final class ChatMentionModule extends Module {
 				out.append(Component.literal(plain.substring(last, matcher.start())));
 			}
 			out.append(Component.literal(plain.substring(matcher.start(), matcher.end()))
-				.withStyle(style -> style.withColor(TextColor.fromRgb(mentionColor.argb() & 0xFFFFFF))));
+				.setStyle(mentionStyle()));
 			last = matcher.end();
 		}
 		if (!found) {
@@ -221,7 +217,6 @@ public final class ChatMentionModule extends Module {
 	}
 
 	private static ParsedChat parseChat(String plain, String selfName) {
-		// <Name> message
 		if (plain.startsWith("<")) {
 			int end = plain.indexOf('>');
 			if (end > 1) {
@@ -260,9 +255,12 @@ public final class ChatMentionModule extends Module {
 				}
 			}
 			if (lower.startsWith(self + " ")) {
-				String prefix = plain.substring(0, selfName.length());
-				String body = plain.substring(selfName.length());
-				return new ParsedChat(selfName, prefix, body, true);
+				return new ParsedChat(
+					selfName,
+					plain.substring(0, selfName.length()),
+					plain.substring(selfName.length()),
+					true
+				);
 			}
 		}
 

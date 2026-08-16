@@ -18,6 +18,7 @@ import net.minecraft.world.entity.player.Player;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -26,8 +27,10 @@ public final class TotemPopNotifierModule extends Module {
 	public static TotemPopNotifierModule INSTANCE;
 
 	private static final int DEFAULT_PREFIX = 0xFFB57BEA;
-	/** Ignore duplicate status packets for the same pop. */
-	private static final long DUP_MS = 100L;
+	/** Same pop can be sent more than once; ignore repeats in this window. */
+	private static final long DUP_MS = 750L;
+	/** Require several ticks of being dead so totem health dips don't reset the streak. */
+	private static final int DEATH_CONFIRM_TICKS = 8;
 
 	private final SectionSetting targetsSection = add(new SectionSetting("Targets", false));
 	private final BoolSetting players = add(new BoolSetting("Players", true));
@@ -69,7 +72,10 @@ public final class TotemPopNotifierModule extends Module {
 	private final Map<UUID, Long> lastPopMs = new HashMap<>();
 	private final Map<UUID, Long> lastEventMs = new HashMap<>();
 	private final Map<UUID, String> lastNames = new HashMap<>();
-	private final Set<UUID> deadPlayers = new HashSet<>();
+	/** Client entity id for this UUID — changes on respawn / re-entry. */
+	private final Map<UUID, Integer> entityIds = new HashMap<>();
+	private final Map<UUID, Integer> deadTicks = new HashMap<>();
+	private final Set<UUID> confirmedDead = new HashSet<>();
 
 	public TotemPopNotifierModule() {
 		super("TotemPopNotifier", Category.NOTIFICATIONS);
@@ -126,10 +132,12 @@ public final class TotemPopNotifierModule extends Module {
 		lastPopMs.clear();
 		lastEventMs.clear();
 		lastNames.clear();
-		deadPlayers.clear();
+		entityIds.clear();
+		deadTicks.clear();
+		confirmedDead.clear();
 	}
 
-	/** Totem status packet (35 / PROTECTED_FROM_DEATH). */
+	/** Totem status packet — call after the client applies the packet (entity health updated). */
 	public static void onPlayerTotemPop(Player player) {
 		TotemPopNotifierModule notifier = INSTANCE;
 		if (notifier == null || !notifier.isEnabled() || player == null) {
@@ -137,25 +145,36 @@ public final class TotemPopNotifierModule extends Module {
 		}
 		String name = player.getName().getString();
 		if (FakePlayerModule.isFakePlayerName(name)) {
-			// FakePlayer notifies directly from its own pop logic.
 			return;
 		}
 		if (!notifier.allows(player, name)) {
 			return;
 		}
-		notifier.onTotemPop(player.getUUID(), name);
+		// After a real totem, they should be alive with some health.
+		if (!player.isAlive() || player.getHealth() <= 0.0f) {
+			return;
+		}
+		notifier.onTotemPop(player);
 	}
 
-	/** Death animation / confirmed death — resets this player's pop streak. */
+	/** Death animation packet — reset this life’s streak immediately. */
 	public static void onPlayerDeath(Player player) {
 		TotemPopNotifierModule notifier = INSTANCE;
 		if (notifier == null || player == null) {
 			return;
 		}
-		notifier.resetCount(player.getUUID());
+		notifier.confirmDeath(player.getUUID());
+	}
+
+	public void onTotemPop(Player player) {
+		onTotemPop(player.getUUID(), player.getId(), player.getName().getString());
 	}
 
 	public void onTotemPop(UUID playerUuid, String playerName) {
+		onTotemPop(playerUuid, -1, playerName);
+	}
+
+	private void onTotemPop(UUID playerUuid, int entityId, String playerName) {
 		if (!isEnabled()) {
 			return;
 		}
@@ -182,8 +201,18 @@ public final class TotemPopNotifierModule extends Module {
 		}
 		lastEventMs.put(playerUuid, now);
 
-		// Alive again after a death — ensure streak starts fresh.
-		deadPlayers.remove(playerUuid);
+		// New client entity (respawn / rejoin render) = new life → start at 0 before this pop.
+		if (entityId >= 0) {
+			Integer prevId = entityIds.put(playerUuid, entityId);
+			if (prevId != null && prevId != entityId) {
+				totemPops.remove(playerUuid);
+				lastPopMs.remove(playerUuid);
+				ChatNotify.clearStack(stackKey(playerUuid));
+			}
+		}
+
+		confirmedDead.remove(playerUuid);
+		deadTicks.remove(playerUuid);
 
 		SocialLists.observe(playerUuid, playerName);
 
@@ -214,16 +243,49 @@ public final class TotemPopNotifierModule extends Module {
 		for (Player other : client.level.players()) {
 			UUID uuid = other.getUUID();
 			seen.add(uuid);
+
+			int id = other.getId();
+			Integer prevId = entityIds.put(uuid, id);
+			if (prevId != null && prevId != id && totemPops.containsKey(uuid)) {
+				// Respawned entity while we still had a streak.
+				resetCount(uuid);
+			}
+
 			boolean dead = other.isDeadOrDying() || other.getHealth() <= 0.0f;
 			if (dead) {
-				if (deadPlayers.add(uuid)) {
-					resetCount(uuid);
+				int ticks = deadTicks.merge(uuid, 1, Integer::sum);
+				if (ticks >= DEATH_CONFIRM_TICKS) {
+					confirmDeath(uuid);
 				}
 			} else {
-				deadPlayers.remove(uuid);
+				deadTicks.remove(uuid);
 			}
 		}
-		deadPlayers.removeIf(uuid -> !seen.contains(uuid));
+
+		// Left client world (out of range / disconnect) — drop streak so next sighting is fresh.
+		Iterator<UUID> it = totemPops.keySet().iterator();
+		while (it.hasNext()) {
+			UUID uuid = it.next();
+			if (!seen.contains(uuid)) {
+				it.remove();
+				lastPopMs.remove(uuid);
+				lastEventMs.remove(uuid);
+				entityIds.remove(uuid);
+				deadTicks.remove(uuid);
+				confirmedDead.remove(uuid);
+				ChatNotify.clearStack(stackKey(uuid));
+			}
+		}
+		lastNames.keySet().removeIf(uuid -> !seen.contains(uuid) && !totemPops.containsKey(uuid));
+		confirmedDead.removeIf(uuid -> !seen.contains(uuid));
+		deadTicks.keySet().removeIf(uuid -> !seen.contains(uuid));
+	}
+
+	private void confirmDeath(UUID uuid) {
+		if (uuid == null || !confirmedDead.add(uuid)) {
+			return;
+		}
+		resetCount(uuid);
 	}
 
 	public void resetCount(UUID uuid) {
@@ -259,7 +321,9 @@ public final class TotemPopNotifierModule extends Module {
 			if (known != null && known.equalsIgnoreCase(needle)) {
 				resetCount(uuid);
 				lastNames.remove(uuid);
-				deadPlayers.remove(uuid);
+				entityIds.remove(uuid);
+				deadTicks.remove(uuid);
+				confirmedDead.remove(uuid);
 				cleared = true;
 			}
 		}

@@ -22,8 +22,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @Mixin(ChatScreen.class)
 public abstract class ChatScreenMixin extends Screen {
-	private static final int SUGGESTION_ROW = 12;
-	private static final int SUGGESTION_FILL = 0xD0000000;
+	private static final int SUGGESTION_FILL = 0xF0101010;
 	private static final int SUGGESTION_SELECTED = 0xFFFFFF00;
 	private static final int SUGGESTION_NORMAL = 0xFFAAAAAA;
 
@@ -40,6 +39,10 @@ public abstract class ChatScreenMixin extends Screen {
 	private int darkNoti$boxH;
 	@Unique
 	private boolean darkNoti$boxActive;
+	@Unique
+	private int darkNoti$optionCount;
+	@Unique
+	private int darkNoti$scrollOffset;
 
 	protected ChatScreenMixin(Component title) {
 		super(title);
@@ -52,18 +55,23 @@ public abstract class ChatScreenMixin extends Screen {
 			return;
 		}
 		String value = this.input.getValue();
+		if (!value.startsWith(ClientCommandHandler.prefix())) {
+			this.input.setSuggestion(null);
+			return;
+		}
+
 		ClientCommandSuggestions.onInputChanged(value);
 		ClientCommandSuggestions.SuggestionResult result = ClientCommandSuggestions.suggest(value);
 		if (!result.active()) {
+			this.input.setSuggestion(null);
 			return;
 		}
 
 		Font font = this.font;
-		int tipY = this.height - 12;
-		if (!result.ghost().isEmpty() && this.input.getCursorPosition() == value.length()) {
-			// Align ghost with EditBox text (same coordinate system as suggestion box).
-			int textX = this.input.getScreenX(value.length());
-			graphics.drawString(font, result.ghost(), textX, tipY, 0xFF808080, false);
+		if (this.input.getCursorPosition() == value.length() && !result.ghost().isEmpty()) {
+			this.input.setSuggestion(result.ghost());
+		} else {
+			this.input.setSuggestion(null);
 		}
 
 		int maxTextW = 0;
@@ -71,23 +79,56 @@ public abstract class ChatScreenMixin extends Screen {
 			maxTextW = Math.max(maxTextW, font.width(option));
 		}
 
+		int visible = result.visibleCount();
+		int rowH = ClientCommandSuggestions.ROW_HEIGHT;
 		int boxW = maxTextW + 1;
-		int boxH = result.options().size() * SUGGESTION_ROW;
+		int boxH = visible * rowH;
 		int boxX = Mth.clamp(this.input.getScreenX(result.start()), 0, this.input.getScreenX(0) + this.input.getInnerWidth() - boxW);
 		int boxY = this.height - 12 - 3 - boxH;
+
+		ClientCommandSuggestions.updateHover(mouseX, mouseY, boxX, boxY, boxW, visible, result.options().size());
+		result = ClientCommandSuggestions.suggest(value);
+		if (!result.active()) {
+			this.input.setSuggestion(null);
+			return;
+		}
+		if (this.input.getCursorPosition() == value.length() && !result.ghost().isEmpty()) {
+			this.input.setSuggestion(result.ghost());
+		} else {
+			this.input.setSuggestion(null);
+		}
 
 		darkNoti$boxX = boxX;
 		darkNoti$boxY = boxY;
 		darkNoti$boxW = boxW;
 		darkNoti$boxH = boxH;
 		darkNoti$boxActive = true;
+		darkNoti$optionCount = result.options().size();
+		darkNoti$scrollOffset = result.offset();
 
-		for (int i = 0; i < result.options().size(); i++) {
-			String option = result.options().get(i);
-			int rowY = boxY + i * SUGGESTION_ROW;
-			graphics.fill(boxX, rowY, boxX + boxW, rowY + SUGGESTION_ROW, SUGGESTION_FILL);
-			boolean selected = i == result.selected();
-			// Same X as ghost text (no +1 offset) so previews line up.
+		boolean canScrollUp = result.offset() > 0;
+		boolean canScrollDown = result.options().size() > result.offset() + visible;
+		if (canScrollUp || canScrollDown) {
+			graphics.fill(boxX, boxY - 1, boxX + boxW, boxY, SUGGESTION_FILL);
+			graphics.fill(boxX, boxY + boxH, boxX + boxW, boxY + boxH + 1, SUGGESTION_FILL);
+			if (canScrollUp) {
+				for (int m = 0; m < boxW; m += 2) {
+					graphics.fill(boxX + m, boxY - 1, boxX + m + 1, boxY, 0xFFFFFFFF);
+				}
+			}
+			if (canScrollDown) {
+				for (int m = 0; m < boxW; m += 2) {
+					graphics.fill(boxX + m, boxY + boxH, boxX + m + 1, boxY + boxH + 1, 0xFFFFFFFF);
+				}
+			}
+		}
+
+		for (int i = 0; i < visible; i++) {
+			int optionIndex = result.offset() + i;
+			String option = result.options().get(optionIndex);
+			int rowY = boxY + i * rowH;
+			graphics.fill(boxX, rowY, boxX + boxW, rowY + rowH, SUGGESTION_FILL);
+			boolean selected = optionIndex == result.selected();
 			graphics.drawString(font, option, boxX, rowY + 2, selected ? SUGGESTION_SELECTED : SUGGESTION_NORMAL, false);
 		}
 	}
@@ -111,7 +152,8 @@ public abstract class ChatScreenMixin extends Screen {
 			|| my < darkNoti$boxY || my > darkNoti$boxY + darkNoti$boxH) {
 			return;
 		}
-		int index = (int) ((my - darkNoti$boxY) / SUGGESTION_ROW);
+		int relative = (int) ((my - darkNoti$boxY) / ClientCommandSuggestions.ROW_HEIGHT);
+		int index = darkNoti$scrollOffset + relative;
 		if (index < 0 || index >= result.options().size()) {
 			return;
 		}
@@ -119,7 +161,26 @@ public abstract class ChatScreenMixin extends Screen {
 		String completed = ClientCommandSuggestions.complete(value);
 		this.input.setValue(completed);
 		this.input.setCursorPosition(completed.length());
+		this.input.setSuggestion(null);
 		ClientCommandSuggestions.onInputChanged(completed);
+		cir.setReturnValue(true);
+	}
+
+	@Inject(method = "mouseScrolled", at = @At("HEAD"), cancellable = true)
+	private void darkNoti$scrollSuggestions(double mouseX, double mouseY, double scrollX, double scrollY, CallbackInfoReturnable<Boolean> cir) {
+		if (this.input == null || !darkNoti$boxActive) {
+			return;
+		}
+		String value = this.input.getValue();
+		if (!value.startsWith(ClientCommandHandler.prefix())) {
+			return;
+		}
+		if (mouseX < darkNoti$boxX || mouseX > darkNoti$boxX + darkNoti$boxW
+			|| mouseY < darkNoti$boxY || mouseY > darkNoti$boxY + darkNoti$boxH) {
+			return;
+		}
+		double amount = Mth.clamp(scrollY, -1.0, 1.0);
+		ClientCommandSuggestions.mouseScrolled(amount, darkNoti$optionCount);
 		cir.setReturnValue(true);
 	}
 
@@ -139,10 +200,8 @@ public abstract class ChatScreenMixin extends Screen {
 		}
 
 		int key = event.key();
-		if (key == GLFW.GLFW_KEY_TAB) {
-			// Cycle the suggestion list (Shift+Tab goes up); do not auto-fill.
-			boolean up = event.hasShiftDown();
-			ClientCommandSuggestions.cycle(up ? -1 : 1);
+		if (key == GLFW.GLFW_KEY_TAB || event.isCycleFocus()) {
+			ClientCommandSuggestions.tabCycle(event.hasShiftDown());
 			cir.setReturnValue(true);
 			return;
 		}
@@ -154,6 +213,10 @@ public abstract class ChatScreenMixin extends Screen {
 		if (key == GLFW.GLFW_KEY_DOWN) {
 			ClientCommandSuggestions.cycle(1);
 			cir.setReturnValue(true);
+			return;
+		}
+		if (key == GLFW.GLFW_KEY_ESCAPE) {
+			this.input.setSuggestion(null);
 		}
 	}
 }

@@ -1,12 +1,11 @@
-# Dark-Notifications
-Notifications mod made for anarchy servers and to be used with other clients at the same time
+# Dark Notifications
 
-The mod currently supports Minecraft version | 1.21.11
+Fabric notifications client for Minecraft **1.21.11**.
 
-If you need to contact me my discord is Darked2b
+- Default ClickGUI bind: **Right Shift**
+- Default command prefix: **`.`**
+- Discord: Darked2b
 
-The GUI was based off the ClickGUI for Midnight client
+ClickGUI layout inspired by Midnight client.
 
-The default click GUI keybind is right shift and the default command prefix is the period.
-
-<img width="1919" height="1086" alt="image" src="assets/clickgui.png" />
+![ClickGUI](assets/clickgui.png)

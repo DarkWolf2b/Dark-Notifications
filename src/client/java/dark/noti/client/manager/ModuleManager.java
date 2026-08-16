@@ -1,10 +1,13 @@
 package dark.noti.client.manager;
 
+import dark.noti.client.config.ModuleConfig;
 import dark.noti.client.features.gui.ClickGuiScreen;
 import dark.noti.client.features.modules.client.ClickGuiModule;
+import dark.noti.client.features.modules.notifications.ModuleToggleModule;
 import dark.noti.client.features.settings.BindSetting;
 import dark.noti.client.features.settings.SectionSetting;
 import dark.noti.client.features.settings.Setting;
+import dark.noti.client.util.SocialLists;
 import net.minecraft.client.Minecraft;
 import org.lwjgl.glfw.GLFW;
 
@@ -22,8 +25,8 @@ public final class ModuleManager {
 	private final boolean[] wasDown = new boolean[GLFW.GLFW_KEY_LAST + 1];
 
 	private ModuleManager() {
-		for (Category c : Category.values()) {
-			byCategory.put(c, new ArrayList<>());
+		for (Category category : Category.values()) {
+			byCategory.put(category, new ArrayList<>());
 		}
 	}
 
@@ -43,12 +46,6 @@ public final class ModuleManager {
 		byCategory.get(module.getCategory()).add(module);
 	}
 
-	public void stubs(Category category, String... names) {
-		for (String name : names) {
-			register(new StubModule(name, category));
-		}
-	}
-
 	public List<Module> all() {
 		return Collections.unmodifiableList(modules);
 	}
@@ -63,25 +60,25 @@ public final class ModuleManager {
 
 	@SuppressWarnings("unchecked")
 	public <T extends Module> T get(Class<T> type) {
-		for (Module m : modules) {
-			if (type.isInstance(m)) {
-				return (T) m;
+		for (Module module : modules) {
+			if (type.isInstance(module)) {
+				return (T) module;
 			}
 		}
 		return null;
 	}
 
 	public Module byName(String name) {
-		for (Module m : modules) {
-			if (m.getName().equalsIgnoreCase(name)) {
-				return m;
+		for (Module module : modules) {
+			if (module.getName().equalsIgnoreCase(name)) {
+				return module;
 			}
 		}
 		return null;
 	}
 
 	public void onModuleToggled(Module module) {
-		dark.noti.client.features.modules.notifications.CCMNotifierModule.onModuleToggled(module);
+		ModuleToggleModule.onModuleToggled(module);
 	}
 
 	public void tick() {
@@ -112,8 +109,8 @@ public final class ModuleManager {
 				module.onTick();
 			}
 		}
-		dark.noti.client.util.SocialLists.refreshSeenPlayers();
-		dark.noti.client.config.ModuleConfig.tick();
+		SocialLists.refreshSeenPlayers();
+		ModuleConfig.tick();
 	}
 
 	private boolean isAnyBindListening() {
