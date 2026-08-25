@@ -1,6 +1,6 @@
 # Dark Notifications
 
-Fabric notifications client for Minecraft **1.21.11**.
+Fabric notifications client for Minecraft **26.1.2**.
 
 - Default ClickGUI bind: **Right Shift**
 - Default command prefix: **`.`**
