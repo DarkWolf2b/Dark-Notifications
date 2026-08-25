@@ -1,22 +1,18 @@
 package dark.noti.client.util;
 
 import dark.noti.client.mixin.ChatComponentAccessor;
-import net.minecraft.client.GuiMessage;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.components.ChatComponent;
+import net.minecraft.client.multiplayer.chat.GuiMessage;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.chat.MessageSignature;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.network.chat.TextColor;
 
-import java.nio.ByteBuffer;
-import java.util.Iterator;
 import java.util.Map;
-import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 public final class ChatNotify {
-	private static final Map<String, MessageSignature> STACK_SIGNATURES = new ConcurrentHashMap<>();
+	private static final Map<String, GuiMessage> STACK_MESSAGES = new ConcurrentHashMap<>();
 
 	private ChatNotify() {
 	}
@@ -134,7 +130,7 @@ public final class ChatNotify {
 	public static void send(MutableComponent message) {
 		Minecraft client = Minecraft.getInstance();
 		if (client.player != null) {
-			client.player.displayClientMessage(message, false);
+			client.gui.getChat().addClientSystemMessage(message);
 		}
 	}
 
@@ -148,43 +144,22 @@ public final class ChatNotify {
 			return;
 		}
 		ChatComponent chat = client.gui.getChat();
+		ChatComponentAccessor accessor = (ChatComponentAccessor) chat;
 		if (replace) {
-			MessageSignature previous = STACK_SIGNATURES.get(stackKey);
-			if (previous != null) {
-				removeSignedMessage(chat, previous);
+			GuiMessage previous = STACK_MESSAGES.get(stackKey);
+			if (previous != null && accessor.darkNoti$getAllMessages().remove(previous)) {
+				accessor.darkNoti$refreshTrimmedMessages();
 			}
 		}
 
-		MessageSignature signature = newSignature(stackKey);
-		STACK_SIGNATURES.put(stackKey, signature);
-		chat.addMessage(message, signature, null);
+		chat.addClientSystemMessage(message);
+		var all = accessor.darkNoti$getAllMessages();
+		if (!all.isEmpty()) {
+			STACK_MESSAGES.put(stackKey, all.getFirst());
+		}
 	}
 
 	public static void clearStack(String stackKey) {
-		STACK_SIGNATURES.remove(stackKey);
-	}
-
-	private static void removeSignedMessage(ChatComponent chat, MessageSignature signature) {
-		ChatComponentAccessor accessor = (ChatComponentAccessor) chat;
-		Iterator<GuiMessage> it = accessor.darkNoti$getAllMessages().iterator();
-		boolean removed = false;
-		while (it.hasNext()) {
-			GuiMessage msg = it.next();
-			if (signature.equals(msg.signature())) {
-				it.remove();
-				removed = true;
-				break;
-			}
-		}
-		if (removed) {
-			accessor.darkNoti$refreshTrimmedMessages();
-		}
-	}
-
-	private static MessageSignature newSignature(String stackKey) {
-		byte[] bytes = new byte[MessageSignature.BYTES];
-		UUID uuid = UUID.nameUUIDFromBytes(("dark-noti:" + stackKey + ":" + System.nanoTime()).getBytes());
-		ByteBuffer.wrap(bytes).putLong(uuid.getMostSignificantBits()).putLong(uuid.getLeastSignificantBits());
-		return new MessageSignature(bytes);
+		STACK_MESSAGES.remove(stackKey);
 	}
 }

@@ -3,7 +3,7 @@ package dark.noti.client.mixin;
 import dark.noti.client.features.commands.ClientCommandHandler;
 import dark.noti.client.features.commands.ClientCommandSuggestions;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.ChatScreen;
 import net.minecraft.client.gui.screens.Screen;
@@ -48,8 +48,8 @@ public abstract class ChatScreenMixin extends Screen {
 		super(title);
 	}
 
-	@Inject(method = "render", at = @At("TAIL"))
-	private void darkNoti$renderSuggestions(GuiGraphics graphics, int mouseX, int mouseY, float partialTick, CallbackInfo ci) {
+	@Inject(method = "extractRenderState", at = @At("TAIL"))
+	private void darkNoti$renderSuggestions(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick, CallbackInfo ci) {
 		darkNoti$boxActive = false;
 		if (this.input == null) {
 			return;
@@ -129,7 +129,7 @@ public abstract class ChatScreenMixin extends Screen {
 			int rowY = boxY + i * rowH;
 			graphics.fill(boxX, rowY, boxX + boxW, rowY + rowH, SUGGESTION_FILL);
 			boolean selected = optionIndex == result.selected();
-			graphics.drawString(font, option, boxX, rowY + 2, selected ? SUGGESTION_SELECTED : SUGGESTION_NORMAL, false);
+			graphics.text(font, option, boxX, rowY + 2, selected ? SUGGESTION_SELECTED : SUGGESTION_NORMAL, false);
 		}
 	}
 

@@ -15,7 +15,7 @@ import dark.noti.client.features.modules.client.ColorsModule;
 import dark.noti.client.features.modules.client.ConfigModule;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.ArrayList;
@@ -298,7 +298,7 @@ public class Panel {
 		return null;
 	}
 
-	public void render(GuiGraphics g, int mx, int my, String query) {
+	public void render(GuiGraphicsExtractor g, int mx, int my, String query) {
 		List<Entry> visible = open ? filter(query) : List.of();
 		int contentH = open ? bodyContentHeight(visible) : 0;
 		int viewH = open ? bodyViewHeight(contentH) : 0;
@@ -370,7 +370,7 @@ public class Panel {
 		}
 	}
 
-	private int drawSetting(GuiGraphics g, Setting<?> s, int cy, int mx, int my) {
+	private int drawSetting(GuiGraphicsExtractor g, Setting<?> s, int cy, int mx, int my) {
 		if (s.isHidden()) {
 			return cy;
 		}
@@ -441,7 +441,7 @@ public class Panel {
 		return cy + ROW;
 	}
 	
-	private int drawSection(GuiGraphics g, SectionSetting section, int cy, int mx, int my) {
+	private int drawSection(GuiGraphicsExtractor g, SectionSetting section, int cy, int mx, int my) {
 		if (section.isHidden()) {
 			return cy;
 		}
@@ -479,7 +479,7 @@ public class Panel {
 		return cy;
 	}
 	
-	private int drawNestedSetting(GuiGraphics g, Setting<?> s, int cy, int mx, int my) {
+	private int drawNestedSetting(GuiGraphicsExtractor g, Setting<?> s, int cy, int mx, int my) {
 		if (s instanceof SectionSetting section) {
 			return drawSection(g, section, cy, mx, my);
 		}
@@ -546,7 +546,7 @@ public class Panel {
 		return cy + ROW;
 	}
 
-	private void drawColorPicker(GuiGraphics g, ColorSetting c, int top, int mx, int my) {
+	private void drawColorPicker(GuiGraphicsExtractor g, ColorSetting c, int top, int mx, int my) {
 		int px = x + 1;
 		int pw = WIDTH - 2;
 		boolean links = showColorLinks();
@@ -639,7 +639,7 @@ public class Panel {
 		return !(activeModule instanceof dark.noti.client.features.modules.client.ColorsModule);
 	}
 
-	private void drawButton(GuiGraphics g, int bx, int by, int bw, String text, int mx, int my) {
+	private void drawButton(GuiGraphicsExtractor g, int bx, int by, int bw, String text, int mx, int my) {
 		// Background already painted by picker; only overlay hover (avoid stacked ROW_IDLE).
 		if (hit(mx, my, bx, by, bw, ROW)) {
 			g.fill(bx, by, bx + bw, by + ROW, Theme.HOVER);
@@ -649,7 +649,7 @@ public class Panel {
 		drawLabel(g, text, bx + (bw - labelWidth(text)) / 2, by + textY(ROW), Theme.TEXT);
 	}
 
-	private static void drawChecker(GuiGraphics g, int bx, int by, int w, int h) {
+	private static void drawChecker(GuiGraphicsExtractor g, int bx, int by, int w, int h) {
 		int cell = 3;
 		for (int iy = 0; iy < h; iy += cell) {
 			for (int ix = 0; ix < w; ix += cell) {
@@ -717,17 +717,17 @@ public class Panel {
 		return ROW;
 	}
 
-	private static void drawLabel(GuiGraphics g, String text, int x, int y, int color) {
+	private static void drawLabel(GuiGraphicsExtractor g, String text, int x, int y, int color) {
 		Font font = Minecraft.getInstance().font;
 		float scale = currentGuiScale();
 		if (Math.abs(scale - 1.0f) < 0.001f) {
-			g.drawString(font, text, x, y, color, true);
+			g.text(font, text, x, y, color, true);
 			return;
 		}
 		// Parent pose is scaled; counter-scale so glyphs stay crisp at native size.
 		g.pose().pushMatrix();
 		g.pose().scale(1.0f / scale, 1.0f / scale);
-		g.drawString(font, text, Math.round(x * scale), Math.round(y * scale), color, true);
+		g.text(font, text, Math.round(x * scale), Math.round(y * scale), color, true);
 		g.pose().popMatrix();
 	}
 
@@ -750,7 +750,7 @@ public class Panel {
 		return Math.max(0, (rowHeight - Minecraft.getInstance().font.lineHeight) / 2);
 	}
 
-	private static void outline(GuiGraphics g, int x, int y, int w, int h, int color) {
+	private static void outline(GuiGraphicsExtractor g, int x, int y, int w, int h, int color) {
 		g.fill(x, y, x + w, y + 1, color);
 		g.fill(x, y + h - 1, x + w, y + h, color);
 		g.fill(x, y, x + 1, y + h, color);
@@ -976,7 +976,7 @@ public class Panel {
 		return swatchX - DELETE_X_W - 2;
 	}
 
-	private void drawDeleteX(GuiGraphics g, int bx, int rowY, int mx, int my) {
+	private void drawDeleteX(GuiGraphicsExtractor g, int bx, int rowY, int mx, int my) {
 		boolean hover = hit(mx, my, bx, rowY, DELETE_X_W, ROW);
 		drawLabel(g, "x", bx + 1, rowY + textY(ROW), hover ? 0xFFFF5555 : Theme.TEXT_DIM);
 	}
