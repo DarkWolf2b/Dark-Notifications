@@ -3,7 +3,7 @@ package dark.noti.client.features.gui;
 import dark.noti.client.config.ModuleConfig;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.CharacterEvent;
 import net.minecraft.client.input.KeyEvent;
@@ -35,7 +35,7 @@ public class ConfigScreen extends Screen {
 	}
 
 	@Override
-	public void extractRenderState(GuiGraphicsExtractor g, int mouseX, int mouseY, float delta) {
+	public void render(GuiGraphics g, int mouseX, int mouseY, float delta) {
 		int left = (width - WIDTH) / 2;
 		int top = (height - HEIGHT) / 2;
 		Font font = Minecraft.getInstance().font;
@@ -45,7 +45,7 @@ public class ConfigScreen extends Screen {
 
 		g.fill(left, top, left + WIDTH, top + HEADER, Theme.accent());
 		int titleY = top + (HEADER - font.lineHeight) / 2;
-		g.text(font, "Configs", left + 6, titleY, 0xFFFFFFFF, false);
+		g.drawString(font, "Configs", left + 6, titleY, 0xFFFFFFFF, false);
 
 		int closeSize = 12;
 		int closeX = left + WIDTH - closeSize - 4;
@@ -57,7 +57,7 @@ public class ConfigScreen extends Screen {
 		int inputY = top + HEADER + 10;
 		g.fill(left + 8, inputY, left + WIDTH - 8, inputY + ROW, 0xFF1A1A1A);
 		outline(g, left + 8, inputY, WIDTH - 16, ROW, 0xFF555555);
-		g.text(font, name + (blink() ? "_" : ""), left + 12, inputY + 5, 0xFFFFFFFF, false);
+		g.drawString(font, name + (blink() ? "_" : ""), left + 12, inputY + 5, 0xFFFFFFFF, false);
 
 		int btnY = inputY + ROW + 10;
 		drawButton(g, left + 8, btnY, 65, ROW, "Save", mouseX, mouseY);
@@ -73,14 +73,14 @@ public class ConfigScreen extends Screen {
 			g.fill(left + 8, rowY, left + WIDTH - 8, rowY + ROW,
 				isSelected ? Theme.accent() : (hit(mouseX, mouseY, left + 8, rowY, WIDTH - 16, ROW) ? 0xFF333333 : 0xFF1A1A1A));
 			outline(g, left + 8, rowY, WIDTH - 16, ROW, 0xFF555555);
-			g.text(font, config, left + 12, rowY + 5, isSelected ? 0xFFFFFFFF : 0xFFAAAAAA, false);
+			g.drawString(font, config, left + 12, rowY + 5, isSelected ? 0xFFFFFFFF : 0xFFAAAAAA, false);
 		}
 
-		super.extractRenderState(g, mouseX, mouseY, delta);
+		super.render(g, mouseX, mouseY, delta);
 	}
 
 	@Override
-	public void extractBackground(GuiGraphicsExtractor g, int mouseX, int mouseY, float partialTick) {
+	public void renderBackground(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
 		// Keep world visible behind the panel.
 	}
 
@@ -230,15 +230,15 @@ public class ConfigScreen extends Screen {
 		}
 	}
 
-	private void drawButton(GuiGraphicsExtractor g, int x, int y, int w, int h, String text, int mx, int my) {
+	private void drawButton(GuiGraphics g, int x, int y, int w, int h, String text, int mx, int my) {
 		g.fill(x, y, x + w, y + h, hit(mx, my, x, y, w, h) ? 0xFF555555 : 0xFF333333);
 		outline(g, x, y, w, h, Theme.accent());
 		Font font = Minecraft.getInstance().font;
-		g.text(font, text, x + (w - font.width(text)) / 2, y + 5, 0xFFFFFFFF, false);
+		g.drawString(font, text, x + (w - font.width(text)) / 2, y + 5, 0xFFFFFFFF, false);
 	}
 
 	/** Pixel X centered in the close button (font glyphs sit high in the cell). */
-	private static void drawCloseX(GuiGraphicsExtractor g, int bx, int by, int size, int color) {
+	private static void drawCloseX(GuiGraphics g, int bx, int by, int size, int color) {
 		int pad = 3;
 		int x0 = bx + pad;
 		int y0 = by + pad;
@@ -251,7 +251,7 @@ public class ConfigScreen extends Screen {
 		}
 	}
 
-	private static void outline(GuiGraphicsExtractor g, int x, int y, int w, int h, int color) {
+	private static void outline(GuiGraphics g, int x, int y, int w, int h, int color) {
 		g.fill(x, y, x + w, y + 1, color);
 		g.fill(x, y + h - 1, x + w, y + h, color);
 		g.fill(x, y, x + 1, y + h, color);

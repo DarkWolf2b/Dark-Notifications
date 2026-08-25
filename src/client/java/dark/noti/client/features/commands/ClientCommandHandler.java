@@ -437,7 +437,7 @@ public final class ClientCommandHandler {
 	private static void send(String message) {
 		Minecraft client = Minecraft.getInstance();
 		if (client.player != null) {
-			client.gui.getChat().addClientSystemMessage(Component.literal(message));
+			client.player.displayClientMessage(Component.literal(message), false);
 		}
 	}
 

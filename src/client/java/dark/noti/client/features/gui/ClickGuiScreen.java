@@ -3,7 +3,7 @@ package dark.noti.client.features.gui;
 import dark.noti.client.manager.Category;
 import dark.noti.client.manager.ModuleManager;
 import dark.noti.client.features.modules.client.ClickGuiModule;
-import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.CharacterEvent;
 import net.minecraft.client.input.KeyEvent;
@@ -110,7 +110,7 @@ public class ClickGuiScreen extends Screen {
 	}
 
 	@Override
-	public void extractRenderState(GuiGraphicsExtractor g, int mouseX, int mouseY, float delta) {
+	public void render(GuiGraphics g, int mouseX, int mouseY, float delta) {
 		float scale = guiScale();
 		int smx = (int) scaleMouse(mouseX);
 		int smy = (int) scaleMouse(mouseY);
@@ -120,11 +120,11 @@ public class ClickGuiScreen extends Screen {
 			panel.render(g, smx, smy, search);
 		}
 		g.pose().popMatrix();
-		super.extractRenderState(g, mouseX, mouseY, delta);
+		super.render(g, mouseX, mouseY, delta);
 	}
 
 	@Override
-	public void extractBackground(GuiGraphicsExtractor g, int mouseX, int mouseY, float partialTick) {
+	public void renderBackground(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
 		// Fully transparent — world shows through; only panel chrome is drawn.
 	}
 
