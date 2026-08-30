@@ -94,10 +94,10 @@ public final class ModuleManager {
 			if (key > 0 && key <= GLFW.GLFW_KEY_LAST) {
 				boolean down = GLFW.glfwGetKey(win, key) == GLFW.GLFW_PRESS;
 				if (down && !wasDown[key] && !isAnyBindListening()) {
-					if (mc.screen instanceof ClickGuiScreen) {
-						mc.setScreen(null);
-					} else if (mc.screen == null) {
-						mc.setScreen(new ClickGuiScreen());
+					if (mc.gui.screen() instanceof ClickGuiScreen) {
+						mc.gui.setScreen(null);
+					} else if (mc.gui.screen() == null) {
+						mc.setScreenAndShow(new ClickGuiScreen());
 					}
 				}
 				wasDown[key] = down;

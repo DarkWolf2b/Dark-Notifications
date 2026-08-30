@@ -67,7 +67,7 @@ public class ClickGuiModule extends Module {
 	public String getCmdPrefix() {
 		String prefix = cmdPrefix.get();
 		if (prefix == null || prefix.isEmpty()) {
-			return ".";
+			return "";
 		}
 		// Always one character for chat commands.
 		return prefix.substring(0, 1);
@@ -88,8 +88,8 @@ public class ClickGuiModule extends Module {
 			return;
 		}
 		Minecraft mc = Minecraft.getInstance();
-		if (mc != null && !(mc.screen instanceof ClickGuiScreen)) {
-			mc.setScreen(new ClickGuiScreen());
+		if (mc != null && !(mc.gui.screen() instanceof ClickGuiScreen)) {
+			mc.setScreenAndShow(new ClickGuiScreen());
 		}
 	}
 
@@ -99,8 +99,8 @@ public class ClickGuiModule extends Module {
 			return;
 		}
 		Minecraft mc = Minecraft.getInstance();
-		if (mc != null && mc.screen instanceof ClickGuiScreen) {
-			mc.setScreen(null);
+		if (mc != null && mc.gui.screen() instanceof ClickGuiScreen) {
+			mc.gui.setScreen(null);
 		}
 	}
 }

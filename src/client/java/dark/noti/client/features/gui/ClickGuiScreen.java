@@ -243,7 +243,7 @@ public class ClickGuiScreen extends Screen {
 		}
 
 		static Screen screen() {
-			return net.minecraft.client.Minecraft.getInstance().screen;
+			return net.minecraft.client.Minecraft.getInstance().gui.screen();
 		}
 	}
 }

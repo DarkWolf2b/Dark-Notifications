@@ -162,7 +162,7 @@ public class ConfigScreen extends Screen {
 
 	@Override
 	public void onClose() {
-		Minecraft.getInstance().setScreen(new ClickGuiScreen());
+		Minecraft.getInstance().setScreenAndShow(new ClickGuiScreen());
 	}
 
 	@Override

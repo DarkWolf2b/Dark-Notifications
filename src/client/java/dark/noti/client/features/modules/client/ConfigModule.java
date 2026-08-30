@@ -28,9 +28,9 @@ public final class ConfigModule extends Module {
 		if (clickGui != null && clickGui.isEnabled()) {
 			clickGui.syncEnabled(false);
 		}
-		if (minecraft.screen instanceof ClickGuiScreen) {
-			minecraft.setScreen(null);
+		if (minecraft.gui.screen() instanceof ClickGuiScreen) {
+			minecraft.gui.setScreen(null);
 		}
-		minecraft.setScreen(new ConfigScreen(null));
+		minecraft.setScreenAndShow(new ConfigScreen(null));
 	}
 }

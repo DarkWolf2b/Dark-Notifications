@@ -55,7 +55,7 @@ public abstract class ChatScreenMixin extends Screen {
 			return;
 		}
 		String value = this.input.getValue();
-		if (!value.startsWith(ClientCommandHandler.prefix())) {
+		if (!ClientCommandHandler.isCommandInput(value)) {
 			this.input.setSuggestion(null);
 			return;
 		}
@@ -139,7 +139,7 @@ public abstract class ChatScreenMixin extends Screen {
 			return;
 		}
 		String value = this.input.getValue();
-		if (!value.startsWith(ClientCommandHandler.prefix())) {
+		if (!ClientCommandHandler.isCommandInput(value)) {
 			return;
 		}
 		ClientCommandSuggestions.SuggestionResult result = ClientCommandSuggestions.suggest(value);
@@ -172,7 +172,7 @@ public abstract class ChatScreenMixin extends Screen {
 			return;
 		}
 		String value = this.input.getValue();
-		if (!value.startsWith(ClientCommandHandler.prefix())) {
+		if (!ClientCommandHandler.isCommandInput(value)) {
 			return;
 		}
 		if (mouseX < darkNoti$boxX || mouseX > darkNoti$boxX + darkNoti$boxW
@@ -190,7 +190,7 @@ public abstract class ChatScreenMixin extends Screen {
 			return;
 		}
 		String value = this.input.getValue();
-		if (!value.startsWith(ClientCommandHandler.prefix())) {
+		if (!ClientCommandHandler.isCommandInput(value)) {
 			return;
 		}
 		ClientCommandSuggestions.onInputChanged(value);

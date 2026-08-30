@@ -25,6 +25,10 @@ bin/
 
 # fabric / local run (logs can include machine paths)
 run/
+runclient-*.txt
+
+# built jars for local install — keep them off GitHub
+releases/
 
 # java
 hs_err_*.log

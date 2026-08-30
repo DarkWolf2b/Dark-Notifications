@@ -112,11 +112,11 @@ public final class ClientCommandSuggestions {
 		}
 
 		String prefix = ClientCommandHandler.prefix();
-		if (!input.startsWith(prefix)) {
+		if (!ClientCommandHandler.isCommandInput(input)) {
 			return inactive();
 		}
 
-		String body = input.substring(prefix.length());
+		String body = prefix.isEmpty() ? input : input.substring(prefix.length());
 		// Bare prefix (".") shows commands like "/". Prefix + only spaces does not.
 		if (!body.isEmpty() && body.trim().isEmpty()) {
 			return inactive();
@@ -415,7 +415,7 @@ public final class ClientCommandSuggestions {
 		}
 
 		String prefix = ClientCommandHandler.prefix();
-		String body = input.substring(prefix.length());
+		String body = prefix.isEmpty() ? input : input.substring(prefix.length());
 		boolean trailingSpace = !body.isEmpty() && body.charAt(body.length() - 1) == ' ';
 		String trimmed = body.trim();
 		String[] parts = trimmed.isEmpty() ? new String[0] : trimmed.split("\\s+");

@@ -43,17 +43,52 @@ public final class ClientCommandHandler {
 		return ".";
 	}
 
+	/** Whether chat input should show client-command suggestions / key handling. */
+	public static boolean isCommandInput(String message) {
+		if (message == null) {
+			return false;
+		}
+		String prefix = prefix();
+		if (!prefix.isEmpty()) {
+			return message.startsWith(prefix);
+		}
+		String trimmed = message.trim();
+		if (trimmed.isEmpty()) {
+			return false;
+		}
+		int space = trimmed.indexOf(' ');
+		String first = (space < 0 ? trimmed : trimmed.substring(0, space)).toLowerCase(Locale.ROOT);
+		for (String cmd : commandNames()) {
+			if (cmd.startsWith(first)) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	private static String commandBody(String message) {
+		String prefix = prefix();
+		if (!prefix.isEmpty() && message.startsWith(prefix)) {
+			return message.substring(prefix.length());
+		}
+		return message;
+	}
+
 	public static boolean tryHandle(String message) {
 		if (message == null) {
 			return false;
 		}
 		String prefix = prefix();
-		if (!message.startsWith(prefix)) {
+		if (!prefix.isEmpty()) {
+			if (!message.startsWith(prefix)) {
+				return false;
+			}
+		} else if (!isCommandInput(message)) {
 			return false;
 		}
-		String body = message.substring(prefix.length()).trim();
+		String body = commandBody(message).trim();
 		if (body.isEmpty()) {
-			return true;
+			return !prefix.isEmpty();
 		}
 		String[] parts = body.split("\\s+", 2);
 		String name = parts[0].toLowerCase(Locale.ROOT);
@@ -437,7 +472,7 @@ public final class ClientCommandHandler {
 	private static void send(String message) {
 		Minecraft client = Minecraft.getInstance();
 		if (client.gui != null) {
-			client.gui.getChat().addClientSystemMessage(Component.literal(message));
+			client.gui.hud.getChat().addClientSystemMessage(Component.literal(message));
 		}
 	}
 

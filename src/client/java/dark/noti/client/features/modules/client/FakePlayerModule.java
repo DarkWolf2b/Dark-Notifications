@@ -158,7 +158,7 @@ public final class FakePlayerModule extends Module {
 		boolean attackDown = GLFW.glfwGetMouseButton(window, GLFW.GLFW_MOUSE_BUTTON_LEFT) == GLFW.GLFW_PRESS;
 		boolean clicked = attackDown && !attackWasDown;
 		attackWasDown = attackDown;
-		if (!clicked || hurtCooldown > 0 || client.screen != null) {
+		if (!clicked || hurtCooldown > 0 || client.gui.screen() != null) {
 			return;
 		}
 		HitResult hit = client.hitResult;

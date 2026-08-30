@@ -27,10 +27,6 @@ public final class ChatNotify {
 		return appendPrefix(message, show, prefix, prefixArgb, prefixArgb, true);
 	}
 
-	/**
-	 * Renders {@code [Name]} where {@code prefix} is the bare name (brackets added automatically).
-	 * Accidental surrounding brackets in the setting are stripped.
-	 */
 	public static MutableComponent appendPrefix(
 		MutableComponent message,
 		boolean show,
@@ -100,7 +96,6 @@ public final class ChatNotify {
 			.append(Component.literal(" "));
 	}
 
-	/** Single-color bracket icon like {@code [+]} / {@code [-]}. */
 	public static MutableComponent appendBracketIcon(MutableComponent message, boolean show, String symbol, int argb) {
 		if (!show) {
 			return message;
@@ -132,20 +127,16 @@ public final class ChatNotify {
 	public static void send(MutableComponent message) {
 		Minecraft client = Minecraft.getInstance();
 		if (client.gui != null) {
-			client.gui.getChat().addClientSystemMessage(message);
+			client.gui.hud.getChat().addClientSystemMessage(message);
 		}
 	}
 
-	/**
-	 * Sends a message, optionally replacing the previous stacked message for {@code stackKey}.
-	 * When {@code replace} is false, starts a new chat line for that key.
-	 */
 	public static void sendStacked(MutableComponent message, String stackKey, boolean replace) {
 		Minecraft client = Minecraft.getInstance();
 		if (client.gui == null) {
 			return;
 		}
-		ChatComponent chat = client.gui.getChat();
+		ChatComponent chat = client.gui.hud.getChat();
 		ChatComponentAccessor accessor = (ChatComponentAccessor) chat;
 		if (replace) {
 			GuiMessage previous = STACK_MESSAGES.get(stackKey);
